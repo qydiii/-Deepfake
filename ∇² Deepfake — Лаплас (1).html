@@ -1,0 +1,1641 @@
+<!DOCTYPE html>
+<html lang="kk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>∇² Deepfake — Лаплас</title>
+<style>
+:root{--bg:#fff;--fg:#111;--mut:#666;--line:#e8e8e8;--line2:#ccc;--soft:#f5f5f5;--ok:#1b7a3d;--un:#9a6200;--bad:#b00020;--nz:#fde6e6;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#121212;--fg:#ececec;--mut:#a3a3a3;--line:#2a2a2a;--line2:#474747;--soft:#1d1d1d;--ok:#5cc98a;--un:#e3b34d;--bad:#ff6b7d;--nz:#4b2329}}
+:root[data-theme="dark"]{--bg:#121212;--fg:#ececec;--mut:#a3a3a3;--line:#2a2a2a;--line2:#474747;--soft:#1d1d1d;--ok:#5cc98a;--un:#e3b34d;--bad:#ff6b7d;--nz:#4b2329}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 70px)}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--fg);background:var(--bg)}
+img,canvas{max-width:100%}
+.w{max-width:980px;margin:0 auto;padding:0 16px}
+header{border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:2}
+header .w{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding-top:10px;padding-bottom:10px}
+header b{margin-right:auto;font-size:1.05rem}
+nav,#langs{display:flex;gap:4px}
+button,select{font:inherit;font-size:.9rem;cursor:pointer;border:1px solid var(--line2);background:var(--bg);border-radius:6px;padding:5px 10px;color:var(--fg)}
+button:hover{border-color:var(--fg)}
+button[aria-pressed=true]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+h1{font-size:1.3rem;margin:24px 0 14px;line-height:1.3}
+h2{font-size:1.15rem;margin:26px 0 8px}
+h3{font-size:1rem;margin:24px 0 6px}
+p{margin:6px 0}
+a{color:inherit}
+.mut{color:var(--mut)}.sm{font-size:.84rem}
+#drop{display:block;border:1.5px dashed var(--line2);border-radius:10px;padding:26px 16px;text-align:center;cursor:pointer}
+#drop.over{border-color:var(--fg);background:var(--soft)}
+#drop small{display:block;color:var(--mut);margin-top:4px}
+input[type=file]{display:none}
+#labsel{margin:12px 0;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+#labsel label{border:1px solid var(--line2);border-radius:6px;padding:4px 10px;cursor:pointer}
+#labsel input{margin:0 6px 0 0}
+.err{color:var(--bad)}
+.row{border-top:1px solid var(--line);padding:12px 0}
+.top{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.top img,td img{object-fit:cover;border-radius:6px;display:block}
+.ph{display:inline-flex;align-items:center;justify-content:center;border-radius:6px;background:var(--soft);color:var(--mut);font-size:.75rem;flex:none}
+.main{flex:1;min-width:190px;cursor:pointer}
+.lo{color:var(--ok)}.un{color:var(--un)}.hi{color:var(--bad)}
+.ch{font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;color:var(--mut)}
+.lab{display:flex;gap:4px}
+.lab .r.on{background:#1b7a3d;color:#fff;border-color:#1b7a3d}
+.lab .f.on{background:#b00020;color:#fff;border-color:#b00020}
+.det{margin-top:10px}
+.det figure{display:inline-block;margin:0 10px 10px 0;vertical-align:top;width:200px}
+.det canvas{width:100%;border:1px solid var(--line);border-radius:4px;display:block;background:#fff}
+.det figcaption{font-size:.78rem;color:var(--mut)}
+.eq{font:17px/1.9 "Cambria Math","STIX Two Math","Times New Roman",serif;background:var(--soft);border-radius:8px;padding:10px 14px;overflow-x:auto;white-space:nowrap}
+.fr{display:inline-flex;flex-direction:column;vertical-align:middle;text-align:center;margin:0 3px;font-size:.88em;line-height:1.25}
+.fr>span+span{border-top:1px solid}
+.g5{display:inline-grid;grid-template-columns:repeat(5,40px);gap:2px;margin:6px 14px 6px 0;font:13px ui-monospace,monospace;text-align:center;vertical-align:top}
+.g5 span{background:var(--soft);padding:6px 0}.g5 .nz{background:var(--nz)}
+.scroll,#tests,#cm{overflow-x:auto}
+table{border-collapse:collapse;font-size:.8rem}
+td,th{border-bottom:1px solid var(--line);padding:4px 6px;text-align:left;white-space:nowrap}
+th{font-weight:600}
+#tests td,#sys{white-space:normal;word-break:break-word}
+.kp{display:flex;flex-wrap:wrap;gap:10px 26px;margin:10px 0}
+.kp b{display:block;font-size:1.3rem}
+.kp span{font-size:.8rem;color:var(--mut)}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+.wb{display:grid;grid-template-columns:170px 1fr 56px;gap:8px;align-items:center;font-size:.82rem;margin:3px 0}
+.wb div{position:relative;height:8px;background:var(--soft);border-radius:4px}
+.wb i{position:absolute;top:0;height:100%;border-radius:4px}
+.bar{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+#curve{background:#fff}
+#log{font:12px/1.5 ui-monospace,monospace;max-height:220px;overflow:auto;background:var(--soft);padding:8px;border-radius:6px;white-space:pre-wrap}
+footer{border-top:1px solid var(--line);margin-top:40px;padding:16px;font-size:.82rem;color:var(--mut)}
+[hidden]{display:none!important}
+@media(max-width:560px){.det figure{width:46%}.wb{grid-template-columns:110px 1fr 48px}}
+</style>
+</head>
+<body>
+<header><div class="w">
+  <b>∇² Deepfake</b>
+  <nav id="tabs"><button data-tab="an" data-i="tab_an"></button><button data-tab="fm" data-i="tab_fm"></button><button data-tab="dev" data-i="tab_dev"></button></nav>
+  <div id="langs"><button data-lang="kk">ҚАЗ</button><button data-lang="ru">РУС</button><button data-lang="en">ENG</button></div>
+</div></header>
+
+<main class="w">
+<!-- ============ ANALYSIS ============ -->
+<section id="an">
+  <h1 data-i="title"></h1>
+  <label id="drop"><input type="file" id="fi" multiple accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"><span data-i="drop"></span><small data-i="drop_h"></small></label>
+  <div id="labsel"><span data-i="lab_q"></span>
+    <label><input type="radio" name="lab" value="" checked><span data-i="lab_u"></span></label>
+    <label><input type="radio" name="lab" value="0"><span data-i="lab_r"></span></label>
+    <label><input type="radio" name="lab" value="1"><span data-i="lab_f"></span></label>
+  </div>
+  <p id="sync" class="sm"></p>
+  <p id="status" class="mut sm"></p>
+  <p id="prog" class="mut sm"></p>
+  <p id="err" class="err sm" hidden></p>
+  <div id="list"></div>
+  <p class="mut sm" id="priv"></p>
+  <p class="mut sm" data-i="discl"></p>
+</section>
+
+<!-- ============ FORMULAS ============ -->
+<section id="fm" hidden>
+  <h1 data-i="tab_fm"></h1>
+  <p data-i="f_in"></p>
+
+  <h2 data-i="g_std"></h2>
+  <h3 data-i="f0t"></h3>
+  <div class="eq">k = min(1, {{1280//max(W, H)}}), &nbsp; I′(x′, y′) = {{1//|A(x′, y′)|}} Σ<sub>(x,y)</sub> a<sub>x′y′</sub>(x, y)·I(x, y), &nbsp; JPEG q = 80 %</div>
+  <p data-i="f0e"></p>
+
+  <h2 data-i="g_lap"></h2>
+  <h3 data-i="f1t"></h3>
+  <div class="eq">Y = 0,299·R + 0,587·G + 0,114·B, &nbsp; f = Y / 255 ∈ [0; 1]</div>
+  <p data-i="f1e"></p>
+
+  <h3 data-i="f2t"></h3>
+  <div class="eq">∇²f = {{∂²f//∂x²}} + {{∂²f//∂y²}} &nbsp; ⟹ &nbsp; ∇²f<sub>x,y</sub> = f<sub>x+1,y</sub> + f<sub>x−1,y</sub> + f<sub>x,y+1</sub> + f<sub>x,y−1</sub> − 4·f<sub>x,y</sub></div>
+  <p data-i="f2e"></p>
+
+  <h3 data-i="f3t"></h3>
+  <div class="eq">∇²(f + b) = ∇²f, &nbsp; ∇²(a·f) = a·∇²f, &nbsp; g = {{f − f̄//σ<sub>f</sub>}}</div>
+  <p data-i="f3e"></p>
+
+  <h3 data-i="f4t"></h3>
+  <div class="eq">E<sub>ij</sub> = log<sub>10</sub>( {{1//T²}} Σ<sub>(x,y)∈B<sub>ij</sub></sub> (∇²g)² ), &nbsp; C<sub>ij</sub> = log<sub>10</sub>( {{1//T²}} Σ<sub>(x,y)∈B<sub>ij</sub></sub> (g − ḡ<sub>ij</sub>)² ), &nbsp; T = 16</div>
+  <p data-i="f4e"></p>
+
+  <h3 data-i="f5t"></h3>
+  <div class="eq">E<sub>ij</sub> ≈ θ̂·C<sub>ij</sub> + ĉ, &nbsp; θ̂ = {{Σ(C − C̄)(E − Ē)//Σ(C − C̄)²}}, &nbsp; R² = 1 − {{Σ r²//Σ(E − Ē)²}}</div>
+  <p data-i="f5e"></p>
+
+  <h3 data-i="f6t"></h3>
+  <div class="eq">r<sub>ij</sub> = E<sub>ij</sub> − (θ̂·C<sub>ij</sub> + ĉ), &nbsp; z<sub>ij</sub> = {{r<sub>ij</sub>//σ<sub>r</sub>}}, &nbsp; Ψ = max<sub>K</sub> |K|, &nbsp; K ⊆ {(i,j) : z<sub>ij</sub> &lt; −1}</div>
+  <p data-i="f6e"></p>
+
+  <h3 data-i="f7t"></h3>
+  <div class="eq">σ(u) = {{1//1 + e<sup>−u</sup>}}, &nbsp; s<sub>1</sub> = σ({{|θ̂ − 1| − 0,22//0,07}}), &nbsp; s<sub>2</sub> = σ({{(1 − R²) − 0,28//0,06}}), &nbsp; s<sub>3</sub> = σ({{Ψ − 48//9}})<br>S = 100·(0,35·s<sub>1</sub> + 0,25·s<sub>2</sub> + 0,40·s<sub>3</sub>)</div>
+  <p data-i="f7e"></p>
+
+  <h3 data-i="ex_h"></h3>
+  <p data-i="ex_e"></p>
+  <div id="ex"></div>
+
+  <h2 data-i="g_add"></h2>
+  <h3 data-i="f8t"></h3>
+  <div class="eq">N = [ 1 −2 1 ; −2 4 −2 ; 1 −2 1 ], &nbsp; σ̂<sub>k</sub> = {{√π//√2}}·{{1//6·(T<sub>n</sub> − 2)²}} Σ<sub>B<sub>k</sub></sub> |f ∗ N|, &nbsp; T<sub>n</sub> = 32<br>𝒱 = {k : σ̂<sub>k</sub> ≥ 0,5 / 255}, &nbsp; |𝒱| ≥ 12, &nbsp; ν<sub>med</sub> = med log<sub>10</sub>σ̂<sub>k</sub>, &nbsp; ν<sub>spr</sub> = 1,4826·med<sub>𝒱</sub> |log<sub>10</sub>σ̂<sub>k</sub> − med<sub>𝒱</sub> log<sub>10</sub>σ̂|</div>
+  <p data-i="f8e"></p>
+
+  <h3 data-i="f9t"></h3>
+  <div class="eq">κ = log<sub>10</sub>( {{#{max(R,G,B) ≥ 254} + #{min(R,G,B) ≤ 1}//N²}} + 10<sup>−5</sup> )</div>
+  <p data-i="f9e"></p>
+
+  <h3 data-i="f10t"></h3>
+  <div class="eq">(u, v) = ( {{x − x<sub>c</sub>//r}}, {{y − y<sub>c</sub>//r}} ), &nbsp; H = {(u, v) : u² + v² ≤ 0,95², &nbsp; Y ≥ max(μ + 2s, Y<sub>max</sub> − 0,12, 0,5)}<br>IoU = {{|H<sub>1</sub> ∩ H<sub>2</sub>|//|H<sub>1</sub> ∪ H<sub>2</sub>|}} ∈ [0; 1]</div>
+  <p data-i="f10e"></p>
+
+  <h2 data-i="g_learn"></h2>
+  <h3 data-i="f11t"></h3>
+  <div class="eq">P(deepfake | x) = σ( logit({{S//100}}) + b + Σ<sub>j=1</sub><sup>9</sup> w<sub>j</sub>·x̃<sub>j</sub> ), &nbsp; logit(p) = ln {{p//1 − p}}, &nbsp; x̃<sub>j</sub> = {{x<sub>j</sub> − m<sub>j</sub>//s<sub>j</sub>}}</div>
+  <p data-i="f11e"></p>
+
+  <h3 data-i="f12t"></h3>
+  <div class="eq">ℒ = −Σ<sub>i</sub> c<sub>y<sub>i</sub></sub>·[ y<sub>i</sub> ln p<sub>i</sub> + (1 − y<sub>i</sub>) ln(1 − p<sub>i</sub>) ] + {{λ//2}}( b² + ‖w‖² ), &nbsp; c<sub>y</sub> = {{n//2·n<sub>y</sub>}}, &nbsp; λ = 1<br>θ ← θ − H<sup>−1</sup>∇ℒ, &nbsp; θ = (b, w), &nbsp; H = Σ<sub>i</sub> c<sub>y<sub>i</sub></sub> p<sub>i</sub>(1 − p<sub>i</sub>) z<sub>i</sub> z<sub>i</sub><sup>T</sup> + λ·I</div>
+  <p data-i="f12e"></p>
+
+  <h3 data-i="f13t"></h3>
+  <div class="eq">Acc<sub>online</sub> = {{1//m}} Σ<sub>t=1</sub><sup>m</sup> 𝟙[ (p<sub>t</sub><sup>(t−1)</sup> ≥ 0,5) = y<sub>t</sub> ], &nbsp; AUC = P( p<sub>deepfake</sub> &gt; p<sub>real</sub> )</div>
+  <p data-i="f13e"></p>
+
+  <h2 data-i="lim_h"></h2>
+  <p data-i="lim"></p>
+  <h2 data-i="refs_h"></h2>
+  <ol id="refs" class="sm"></ol>
+</section>
+
+<!-- ============ DEVELOPER ============ -->
+<section id="dev" hidden>
+  <h1 data-i="tab_dev"></h1>
+  <div class="kp" id="kpi"></div>
+  <p class="mut sm" data-i="d_on_n"></p>
+  <div class="bar">
+    <button id="bTest" data-i="d_test"></button>
+    <button id="bExp" data-i="d_exp"></button>
+    <label class="btn"><input type="file" id="fImp" accept=".json,application/json"><button type="button" id="bImp" data-i="d_imp"></button></label>
+    <button id="bReset" data-i="d_reset"></button>
+  </div>
+  <p id="dmsg" class="sm"></p>
+  <div id="tests"></div>
+
+  <h2 data-i="d_curve"></h2>
+  <canvas id="curve" width="900" height="220" style="width:100%;max-width:900px;border:1px solid #eee;border-radius:6px"></canvas>
+
+  <h2 data-i="d_cm"></h2>
+  <div id="cm"></div>
+  <h2 data-i="d_w"></h2>
+  <div id="wts"></div>
+
+  <h2 data-i="d_tab"></h2>
+  <div class="bar" id="filt">
+    <button data-f="all" data-i="d_f_all"></button>
+    <button data-f="err" data-i="d_f_err"></button>
+    <button data-f="un" data-i="d_f_un"></button>
+  </div>
+  <p class="mut sm" data-i="d_err_n"></p>
+  <div class="scroll"><table id="tbl"></table></div>
+
+  <h2 data-i="d_log"></h2>
+  <div id="log"></div>
+  <h2 data-i="d_sys"></h2>
+  <p id="sys" class="sm"></p>
+</section>
+</main>
+
+<footer class="w"><span data-i="school"></span> · <span data-i="title"></span> · © 2026</footer>
+<script>
+var I18N = {};
+I18N.ru = {
+tab_an:"Анализ", tab_fm:"Формулы", tab_dev:"Разработчик",
+title:"Математические модели обнаружения Deepfake на фотографиях",
+school:"Специализированная школа-гимназия-интернат имени Ибрая Алтынсарина",
+drop:"Перетащите изображения сюда или нажмите, чтобы выбрать",
+drop_h:"JPEG, PNG, WebP · от 256 до 8000 px · можно много файлов сразу",
+lab_q:"Загружаемые изображения:", lab_u:"не знаю", lab_r:"Настоящее", lab_f:"Deepfake",
+privacy:"Изображения не покидают ваш компьютер: анализ и обучение идут в браузере, сохраняются только числа-признаки и миниатюры 64×64.",
+discl:"Результат — оценка модели, а не доказательство. Точность показана такой, какой она измерена на ваших данных; для других изображений она может быть ниже.",
+v_lo:"Низкая вероятность deepfake", v_un:"Неопределённо", v_hi:"Высокая вероятность deepfake",
+by_lap:"пока по модели Лапласа:",
+fb_new:"помечено — модель ещё не была обучена", fb_ok:"модель угадала заранее", fb_bad:"модель ошиблась — исправлено, модель переобучена",
+st_on:"Модель обучена на %N помеченных изображениях (настоящих %R, deepfake %F).",
+st_acc:"Онлайн-точность: %A на %M предсказаниях, сделанных до того, как модель узнала ответ.",
+st_acc0:"Онлайн-точность появится после следующих помеченных изображений.",
+st_off:"Модель ещё не обучена: нужно не меньше 5 помеченных изображений каждого вида (сейчас настоящих %R, deepfake %F). До этого вывод даёт модель Лапласа. Помечайте фото кнопками справа или выберите метку перед загрузкой.",
+mp_idle:"", mp_loading:"MediaPipe загружается…", mp_ready:"MediaPipe готов.", mp_failed:"MediaPipe недоступен (нужен интернет) — метод глаз отключён.",
+prog:"Обработка %D из %T", done:"Готово: добавлено %A, пропущено %S, повторов %D.",
+det_old:"Карты доступны только для изображений, загруженных в этом сеансе.",
+m_lap:"∇²f — образ Лапласа", m_anom:"Аномалии резкости", m_noise:"Шум по тайлам", m_eye:"Радужки: 1 · 2 · наложение",
+n_na:"недоступно (%V тайлов с шумом)",
+e_nomp:"MediaPipe не загружен", e_noface:"лицо не найдено", e_small:"глаза слишком малы", e_closed:"глаза закрыты",
+e_nohl:"бликов нет", e_noiris:"радужки не найдены",
+w_th:"Закон масштаба нарушен: θ = %V вместо ≈ 1 — контраст есть, мелких деталей не хватает.",
+w_r2:"Резкость слабо связана с контрастом (R² = %V).",
+w_psi:"Найдена связная область слишком гладких тайлов (Ψ = %V) — возможна вклейка.",
+w_nz:"Уровень шума в разных частях различается (ν_spr = %V).",
+w_eye:"Блики в двух глазах не совпадают (IoU = %V).",
+w_none:"Ни один метод не нашёл подозрительных признаков. Это не доказывает подлинность.",
+err_flat:"На изображении нечего анализировать: все пиксели одинаковы.",
+err_broken:"Не удалось прочитать изображение.", err_format:"Формат не поддерживается: нужен JPEG, PNG или WebP.",
+err_small:"Изображение меньше 256 px.", err_big:"Изображение больше 8000 px или 25 МБ.",
+err_store:"Память браузера заполнена — сохраните данные через «Разработчик → Экспорт».",
+f_in:"Все формулы в точности совпадают с кодом страницы. Их правильность проверяется кнопкой «Самотест» на экране разработчика.",
+g_lap:"1. Основная модель: оператор Лапласа",
+f1t:"1.1. Изображение в числа",
+f1e:"R, G, B — яркость красного, зелёного и синего каналов пикселя (0…255). Y — общая яркость; коэффициенты стандарта BT.601 учитывают, что глаз чувствительнее к зелёному. f — яркость, приведённая к отрезку [0; 1]. Анализируется центральный квадрат изображения, уменьшенный до 512×512 пикселей.",
+f2t:"1.2. Оператор Лапласа",
+f2e:"∇²f — сумма вторых производных по x и по y. Вторая производная показывает, как меняется скорость изменения яркости, то есть «изгиб». В дискретном виде из суммы четырёх соседей пикселя вычитается его учетверённое значение. На ровном участке результат равен 0, на границах и мелких деталях — велик по модулю.",
+f3t:"1.3. Почему яркость и контраст не мешают",
+f3e:"b — добавка яркости, a — множитель контраста. Вторая производная постоянной величины равна нулю, поэтому ∇²(f + b) = ∇²f точно. Множитель a выносится за оператор; его убирает нормирование: f̄ — средняя яркость, σ_f — стандартное отклонение яркости всего изображения. Поэтому тёмное или бледное фото никогда не считается подозрительным из-за яркости.",
+f4t:"1.4. Резкость и контраст каждого участка",
+f4e:"Изображение делится на тайлы B_ij размером T × T = 16 × 16 пикселей (сетка 32 × 32). E_ij — логарифм средней энергии Лапласа в тайле: насколько он резкий. C_ij — логарифм дисперсии яркости в тайле, ḡ_ij — его средняя яркость: сколько в нём «содержания». Логарифм делает связь между ними линейной.",
+f5t:"1.5. Закон масштаба",
+f5e:"Каждый тайл — точка (C_ij, E_ij). θ̂ и ĉ — наклон и сдвиг прямой, найденной методом наименьших квадратов; C̄, Ē — средние значения. У настоящих фото θ ≈ 1: чем больше контраст, тем пропорционально больше мелких деталей (статистика естественных изображений, Field 1987). Генератор сохраняет контраст, но теряет детали — θ падает. r — отклонения точек от прямой; R² ∈ [0; 1] показывает, насколько плотно точки лежат на прямой.",
+f6t:"1.6. Карта аномалий и след вклейки",
+f6e:"r_ij — отклонение тайла от закона, σ_r — стандартное отклонение всех отклонений, z_ij — отклонение в единицах σ_r. z < −1 означает «слишком гладко для своего контраста». K — связная группа таких тайлов (соседи по четырём сторонам), Ψ — число тайлов в самой большой группе. Вклейка оставляет цельный участок, а случайный шум — разрозненные тайлы.",
+f7t:"1.7. Оценка Лапласа до обучения",
+f7e:"σ(u) — сигмоида: переводит любое число в интервал (0; 1). s₁, s₂, s₃ сравнивают признаки с порогами 0,22; 0,28; 48 в масштабе 0,07; 0,06; 9. S — взвешенная сумма (веса 0,35; 0,25; 0,40), от 0 до 100. Пороги и веса эвристические: так сайт работает, пока нет помеченных данных. S < 35 — низкая вероятность, 35–65 — неопределённо, S ≥ 65 — высокая.",
+ex_h:"Пример расчёта 5 × 5",
+ex_e:"Внутри ровных областей ∇² равен 0, ненулевые значения — только на границе. После прибавления 40 к каждому пикселю результат не меняется ни в одной клетке. Эти числа вычислены кодом страницы.",
+g_add:"2. Дополнительные методы",
+f8t:"2.1. Однородность шума (Immerkær 1996; Pan, Zhang, Lyu 2012)",
+f8e:"N — ядро Immerkær, разность двух масок Лапласа: оно убирает плавную структуру и оставляет шум. f ∗ N — свёртка изображения с ядром. σ̂_k — оценка шума в тайле 32 × 32 (T_n = 32); множитель √π/√2 · 1/6 делает её точной для гауссова шума. Шум меряется в 40 % самых однородных тайлов. 𝒱 — тайлы с шумом не меньше половины уровня яркости: меньшее значение — след JPEG-сжатия, а не шум камеры. Если в 𝒱 меньше 12 тайлов, метод честно сообщает «недоступно». ν_med — типичный уровень шума, ν_spr — его разброс (медианное отклонение; 1,4826 приводит его к масштабу σ). Вклеенная область приносит другой шум, и ν_spr растёт.",
+f9t:"2.2. Признак насыщенности (McCloskey, Albright 2019)",
+f9e:"# — число пикселей, N² — их общее число. Камера обрезает самые яркие места на 255 и самые тёмные на 0, а выходной слой GAN сглаживает значения, поэтому точно обрезанные пиксели у него редки. κ — логарифм их доли; 10⁻⁵ защищает от log 0. Признак слабый: он ничего не решает сам и работает только внутри обученной модели.",
+f10t:"2.3. Блики в глазах (Hu, Li, Lyu 2021) + MediaPipe Face Mesh",
+f10e:"MediaPipe находит 478 точек лица, в том числе центр (x_c, y_c) и край каждой радужки; r — радиус радужки. (u, v) — координаты внутри радужки: центр — 0, край — 1; так два глаза совмещаются по положению и размеру. μ и s — средняя яркость и её отклонение внутри круга, Y_max — самая яркая точка. H — маска блика. IoU — отношение общей части двух масок к их объединению: на настоящем фото оба глаза отражают одни и те же источники света (IoU близко к 1), GAN этого не знает (IoU близко к 0). Метод отключается, если лица нет, глаза закрыты, радужка меньше 5 px или бликов нет.",
+g_learn:"3. Обучение",
+f11t:"3.1. Логистическая регрессия",
+f11e:"x = (x₁ … x₉) — 9 признаков изображения: |θ − 1|, 1 − R², Ψ, Λ = log₁₀ средней энергии Лапласа, ν_med, ν_spr, κ, 1 − IoU и признак «глаза измерены». m_j и s_j — среднее и стандартное отклонение признака по помеченным изображениям; x̃_j — стандартизованный признак. w_j — вес признака, b — сдвиг. P — вероятность того, что изображение deepfake. Неизмеренный признак заменяется средним (x̃ = 0) и на решение не влияет.",
+f12t:"3.2. Как модель учится",
+f12e:"n — число помеченных изображений, y_i — метка (1 — deepfake, 0 — настоящее), p_i — предсказание модели. ℒ — логарифмическая функция потерь: она велика, когда модель уверенно ошибается. c_y — вес класса (n_y — число изображений этого класса), чтобы оба класса учитывались поровну. λ = 0,05 штрафует слишком большие веса (защита от переобучения). Веса меняются против градиента с шагом η = 0,3, 1500 шагов. Модель переобучается заново сразу после каждой новой метки или исправления.",
+f13t:"3.3. Как измеряется точность",
+f13e:"Онлайн-точность: когда вы помечаете изображение, его сначала оценивает модель p⁽ᵗ⁻¹⁾, обученная только на предыдущих t − 1 метках, и лишь потом оно добавляется в обучение. 𝟙[…] равно 1, если предсказание (p ≥ 0,5 → deepfake) совпало с меткой y_t; m — число таких проверок. Поэтому это честная точность на ещё не виденных данных. Кроме неё экран разработчика показывает 5-кратную кросс-валидацию и AUC — вероятность того, что случайный deepfake получит P больше, чем случайное настоящее фото (0,5 — угадывание, 1 — идеально).",
+lim_h:"Ограничения",
+lim:"100 % точности не бывает: каждый признак опирается на конкретный недостаток генераторов, а новые генераторы их исправляют. Сильное сжатие (мессенджеры, скриншоты) разрушает признаки Лапласа и шума. Метод глаз работает только при съёмке анфас с видимыми бликами и требует интернета для MediaPipe. Обученная модель знает только ваши данные: если все фейки — PNG, а все настоящие — JPEG, она выучит формат файла, а не дипфейк. Поэтому обе группы нужно готовить одинаково, а каждое изображение должно быть отдельным снимком.",
+refs_h:"Литература",
+d_on_n:"Онлайн-точность — точность предсказаний, сделанных до того, как модель узнала ответ. Кривая ниже показывает, как она растёт по мере обучения.",
+d_test:"Самотест", d_exp:"Экспорт данных", d_imp:"Импорт данных", d_reset:"Очистить всё",
+d_curve:"Кривая обучения", d_cm:"Матрица ошибок (кросс-валидация)", d_w:"Веса признаков",
+d_tab:"Все результаты", d_f_all:"Все", d_f_err:"Ошибки", d_f_un:"Без метки",
+d_err_n:"Ошибка — изображение, которое модель, обученная без него (P_CV), относит не к тому классу. Если неверна сама метка, исправьте её в столбце «Метка» — модель сразу переобучится.",
+d_log:"Журнал событий и ошибок", d_sys:"Система",
+k_lab:"помечено: настоящие / deepfake", k_un:"без метки", k_model:"модель обучена", k_on:"онлайн-точность", k_cv:"кросс-валидация",
+yes:"да", no:"нет", d_nocurve:"Кривая появится, когда модель начнёт предсказывать метки заранее.",
+pr_r:"прогноз: настоящее", pr_f:"прогноз: deepfake", is_r:"на деле: настоящее", is_f:"на деле: deepfake",
+d_cv_n:"%K-кратная кросс-валидация: каждое изображение проверено моделью, которая его не видела.",
+d_need:"Нужно не меньше 5 помеченных изображений каждого вида (сейчас %R / %F).",
+d_w_n:"Красный — признак повышает вероятность deepfake, зелёный — понижает. Признаки стандартизованы, веса сравнимы.",
+c_name:"Файл", c_lab:"Метка", c_eye:"Глаза", del:"Удалить", d_empty:"Пока нет результатов.",
+k_store:"память", k_all:"всего изображений", k_sess:"с картами в этом сеансе",
+t1:"Пример 5×5: ∇² не меняется при +40", t2:"Лаплас: инвариантность к яркости и контрасту", t3:"Шум: оценка Immerkær на известном шуме",
+t4:"Блики: синтетические глаза (одинаковые / разные / мелкие)", t5:"Обучение: находит реальный сигнал", t6:"Обучение: на случайных метках ≈ 50 % (нет утечки)",
+t7:"Хранилище браузера работает", t8:"MediaPipe загружен",
+imp_q:"Заменить текущие данные данными из файла?", imp_bad:"Это не файл данных этого сайта.", reset_q:"Удалить все изображения, метки и обученную модель?"
+};
+
+I18N.kk = {
+tab_an:"Талдау", tab_fm:"Формулалар", tab_dev:"Әзірлеуші",
+title:"Фотосуреттердегі Deepfake-терді анықтаудың математикалық модельдері",
+school:"Ыбырай Алтынсарин атындағы мамандандырылған мектеп-гимназия-интернаты",
+drop:"Суреттерді осында сүйреңіз немесе таңдау үшін басыңыз",
+drop_h:"JPEG, PNG, WebP · 256-дан 8000 px-ке дейін · бірден көп файл жүктеуге болады",
+lab_q:"Жүктелетін суреттер:", lab_u:"білмеймін", lab_r:"Нақты", lab_f:"Deepfake",
+privacy:"Суреттер компьютеріңізден шықпайды: талдау мен оқыту браузерде жүреді, тек белгі-сандар мен 64×64 шағын көшірмелер сақталады.",
+discl:"Нәтиже — модельдің бағасы, дәлел емес. Дәлдік сіздің деректеріңізде қалай өлшенсе, солай көрсетіледі; басқа суреттерде ол төмен болуы мүмкін.",
+v_lo:"Deepfake ықтималдығы төмен", v_un:"Белгісіз", v_hi:"Deepfake ықтималдығы жоғары",
+by_lap:"әзірге Лаплас моделі бойынша:",
+fb_new:"белгіленді — модель әлі оқытылмаған еді", fb_ok:"модель алдын ала дұрыс болжады", fb_bad:"модель қателесті — түзетілді, модель қайта үйренді",
+st_on:"Модель %N белгіленген суретте үйренді (нақты %R, deepfake %F).",
+st_acc:"Онлайн дәлдік: %A — модель жауапты білмей тұрып жасаған %M болжам бойынша.",
+st_acc0:"Онлайн дәлдік келесі белгіленген суреттерден кейін пайда болады.",
+st_off:"Модель әлі оқытылмаған: әр түрден кемінде 5 белгіленген сурет қажет (қазір нақты %R, deepfake %F). Оған дейін қорытындыны Лаплас моделі береді. Суреттерді оң жақтағы батырмалармен белгілеңіз немесе жүктер алдында белгіні таңдаңыз.",
+mp_idle:"", mp_loading:"MediaPipe жүктелуде…", mp_ready:"MediaPipe дайын.", mp_failed:"MediaPipe қолжетімсіз (интернет қажет) — көз әдісі өшірулі.",
+prog:"Өңделуде: %D / %T", done:"Дайын: қосылды %A, өткізілді %S, қайталанған %D.",
+det_old:"Карталар тек осы сеанста жүктелген суреттер үшін қолжетімді.",
+m_lap:"∇²f — Лаплас бейнесі", m_anom:"Өткірлік аномалиялары", m_noise:"Тайлдар бойынша шу", m_eye:"Ирис: 1 · 2 · қабаттасу",
+n_na:"қолжетімсіз (шуы бар тайл: %V)",
+e_nomp:"MediaPipe жүктелмеген", e_noface:"бет табылмады", e_small:"көз тым кішкентай", e_closed:"көз жабық",
+e_nohl:"шағылыс жоқ", e_noiris:"ирис табылмады",
+w_th:"Масштаб заңы бұзылған: θ = %V, ал керегі ≈ 1 — контраст бар, бірақ ұсақ бөлшектер жетіспейді.",
+w_r2:"Өткірлік контрастпен әлсіз байланысқан (R² = %V).",
+w_psi:"Тым тегіс тайлдардың байланысқан аймағы табылды (Ψ = %V) — вклейка болуы мүмкін.",
+w_nz:"Кадрдың әр бөлігінде шу деңгейі әртүрлі (ν_spr = %V).",
+w_eye:"Екі көздегі шағылыс сәйкес келмейді (IoU = %V).",
+w_none:"Ешбір әдіс күдікті белгі тапқан жоқ. Бұл суреттің шынайылығын дәлелдемейді.",
+err_flat:"Суретте талдайтын ештеңе жоқ: барлық пиксель бірдей.",
+err_broken:"Суретті оқу мүмкін болмады.", err_format:"Пішім қолдау таппайды: JPEG, PNG немесе WebP қажет.",
+err_small:"Сурет 256 px-тен кіші.", err_big:"Сурет 8000 px-тен немесе 25 МБ-тан үлкен.",
+err_store:"Браузер жады толды — деректерді «Әзірлеуші → Экспорт» арқылы сақтаңыз.",
+f_in:"Барлық формула беттегі кодпен дәл сәйкес келеді. Олардың дұрыстығы әзірлеуші экранындағы «Өзін-өзі тексеру» батырмасымен тексеріледі.",
+g_lap:"1. Негізгі модель: Лаплас операторы",
+f1t:"1.1. Суретті санға айналдыру",
+f1e:"R, G, B — пикселдің қызыл, жасыл және көк арналарының жарықтығы (0…255). Y — жалпы жарықтық; BT.601 стандартының коэффициенттері көздің жасыл түске сезімталырақ екенін ескереді. f — [0; 1] аралығына келтірілген жарықтық. Суреттің ортасындағы шаршы алынып, 512×512 пиксельге кішірейтіледі.",
+f2t:"1.2. Лаплас операторы",
+f2e:"∇²f — x және y бойынша екінші туындылардың қосындысы. Екінші туынды жарықтықтың өзгеру жылдамдығы қалай өзгеретінін, яғни «иілуді» көрсетеді. Дискретті түрде пикселдің төрт көршісінің қосындысынан оның төрт еселенген мәні алынады. Тегіс жерде нәтиже 0-ге тең, ал шекара мен ұсақ бөлшектерде модулі бойынша үлкен.",
+f3t:"1.3. Жарықтық пен контраст неге кедергі болмайды",
+f3e:"b — жарықтыққа қосылатын шама, a — контраст көбейткіші. Тұрақты шаманың екінші туындысы нөлге тең, сондықтан ∇²(f + b) = ∇²f дәл орындалады. a көбейткіші оператордан тыс шығады; оны нормалау жояды: f̄ — орташа жарықтық, σ_f — бүкіл суреттің жарықтық бойынша стандартты ауытқуы. Сондықтан қараңғы немесе бозғылт фото жарықтығы үшін ешқашан күдікті болмайды.",
+f4t:"1.4. Әр бөліктің өткірлігі мен контрасты",
+f4e:"Сурет T × T = 16 × 16 пиксельдік B_ij тайлдарына бөлінеді (32 × 32 тор). E_ij — тайлдағы Лаплас энергиясының орташасының логарифмі: ол қаншалықты өткір. C_ij — тайлдағы жарықтық дисперсиясының логарифмі, ḡ_ij — оның орташа жарықтығы: онда қанша «мазмұн» бар. Логарифм олардың арасындағы байланысты сызықтық етеді.",
+f5t:"1.5. Масштаб заңы",
+f5e:"Әр тайл — (C_ij, E_ij) нүктесі. θ̂ пен ĉ — ең кіші квадраттар әдісімен табылған түзудің көлбеулігі мен ығысуы; C̄, Ē — орташа мәндер. Нақты фотода θ ≈ 1: контраст неғұрлым көп болса, ұсақ бөлшектер де соғұрлым көп (табиғи сурет статистикасы, Field 1987). Генератор контрастты сақтайды, бірақ бөлшектерді жоғалтады — θ төмендейді. r — нүктелердің түзуден ауытқуы; R² ∈ [0; 1] нүктелердің түзуге қаншалықты тығыз жататынын көрсетеді.",
+f6t:"1.6. Аномалия картасы және вклейка ізі",
+f6e:"r_ij — тайлдың заңнан ауытқуы, σ_r — барлық ауытқудың стандартты ауытқуы, z_ij — σ_r бірлігіндегі ауытқу. z < −1 «өз контрасты үшін тым тегіс» дегенді білдіреді. K — осындай тайлдардың байланысқан тобы (төрт жағынан көршілер), Ψ — ең үлкен топтағы тайл саны. Вклейка тұтас аймақ қалдырады, ал кездейсоқ шу — шашыраңқы тайлдар.",
+f7t:"1.7. Оқытуға дейінгі Лаплас бағасы",
+f7e:"σ(u) — сигмоида: кез келген санды (0; 1) аралығына келтіреді. s₁, s₂, s₃ белгілерді 0,22; 0,28; 48 шектерімен 0,07; 0,06; 9 масштабында салыстырады. S — салмақтанған қосынды (салмақтар 0,35; 0,25; 0,40), 0-ден 100-ге дейін. Шектер мен салмақтар эвристикалық: сайт белгіленген деректер болмаған кезде осылай жұмыс істейді. S < 35 — төмен ықтималдық, 35–65 — белгісіз, S ≥ 65 — жоғары.",
+ex_h:"5 × 5 есептеу мысалы",
+ex_e:"Тегіс аймақтардың ішінде ∇² нөлге тең, нөлден өзгеше мәндер тек шекарада. Әр пикселге 40 қосқаннан кейін нәтиже бірде-бір ұяшықта өзгермейді. Бұл сандарды беттегі код есептейді.",
+g_add:"2. Қосымша әдістер",
+f8t:"2.1. Шудың біркелкілігі (Immerkær 1996; Pan, Zhang, Lyu 2012)",
+f8e:"N — Immerkær ядросы, екі Лаплас маскасының айырмасы: ол тегіс құрылымды жойып, шуды қалдырады. f ∗ N — суреттің ядромен үйірткісі. σ̂_k — 32 × 32 тайлдағы шудың бағасы (T_n = 32); √π/√2 · 1/6 көбейткіші оны гаусс шуы үшін дәл етеді. Шу ең біртекті 40 % тайлда өлшенеді. 𝒱 — шуы жарықтықтың жарты деңгейінен кем емес тайлдар: одан кіші мән — камера шуы емес, JPEG сығуының ізі. 𝒱-да 12-ден аз тайл болса, әдіс «қолжетімсіз» деп адал хабарлайды. ν_med — шудың әдеттегі деңгейі, ν_spr — оның шашырауы (медианалық ауытқу; 1,4826 оны σ масштабына келтіреді). Вклейка басқа шу әкеледі, сондықтан ν_spr өседі.",
+f9t:"2.2. Қанығу белгісі (McCloskey, Albright 2019)",
+f9e:"# — пиксельдер саны, N² — олардың жалпы саны. Камера ең жарық жерлерді 255-те, ең қараңғы жерлерді 0-де кеседі, ал GAN-ның шығыс қабаты мәндерді тегістейді, сондықтан дәл кесілген пиксельдер онда сирек. κ — олардың үлесінің логарифмі; 10⁻⁵ log 0-ден қорғайды. Белгі әлсіз: ол өзі ештеңе шешпейді, тек оқытылған модельдің ішінде жұмыс істейді.",
+f10t:"2.3. Көздегі шағылыстар (Hu, Li, Lyu 2021) + MediaPipe Face Mesh",
+f10e:"MediaPipe беттің 478 нүктесін табады, соның ішінде әр иристің центрі (x_c, y_c) мен шеті бар; r — ирис радиусы. (u, v) — ирис ішіндегі координаталар: центр — 0, шеті — 1; осылайша екі көз орны мен өлшемі бойынша беттестіріледі. μ мен s — шеңбер ішіндегі орташа жарықтық пен оның ауытқуы, Y_max — ең жарық нүкте. H — шағылыс маскасы. IoU — екі масканың ортақ бөлігінің олардың бірігуіне қатынасы: нақты фотода екі көз бір жарық көздерін шағылыстырады (IoU 1-ге жақын), GAN мұны білмейді (IoU 0-ге жақын). Бет жоқ болса, көз жабық болса, ирис 5 px-тен кіші болса немесе шағылыс болмаса, әдіс өшеді.",
+g_learn:"3. Оқыту",
+f11t:"3.1. Логистикалық регрессия",
+f11e:"x = (x₁ … x₉) — суреттің 9 белгісі: |θ − 1|, 1 − R², Ψ, Λ = Лаплас энергиясы орташасының log₁₀-ы, ν_med, ν_spr, κ, 1 − IoU және «көз өлшенді» белгісі. m_j мен s_j — белгіленген суреттер бойынша белгінің орташасы мен стандартты ауытқуы; x̃_j — стандартталған белгі. w_j — белгінің салмағы, b — ығысу. P — суреттің deepfake болу ықтималдығы. Өлшенбеген белгі орташамен ауыстырылады (x̃ = 0) және шешімге әсер етпейді.",
+f12t:"3.2. Модель қалай үйренеді",
+f12e:"n — белгіленген суреттер саны, y_i — белгі (1 — deepfake, 0 — нақты), p_i — модельдің болжамы. ℒ — логарифмдік шығын функциясы: модель сеніммен қателескенде ол үлкен. c_y — кластың салмағы (n_y — осы кластағы сурет саны), екі класс тең ескерілуі үшін. λ = 0,05 тым үлкен салмақтарға айыппұл салады (артық бейімделуден қорғау). Салмақтар η = 0,3 қадаммен градиентке қарсы 1500 рет өзгереді. Әр жаңа белгіден немесе түзетуден кейін модель бірден қайта үйренеді.",
+f13t:"3.3. Дәлдік қалай өлшенеді",
+f13e:"Онлайн дәлдік: сіз суретті белгілегенде, оны алдымен тек алдыңғы t − 1 белгіде оқытылған p⁽ᵗ⁻¹⁾ модель бағалайды, содан кейін ғана ол оқытуға қосылады. 𝟙[…] болжам (p ≥ 0,5 → deepfake) y_t белгісімен сәйкес келсе 1-ге тең; m — осындай тексерулер саны. Сондықтан бұл әлі көрмеген деректердегі адал дәлдік. Сонымен қатар әзірлеуші экраны 5 бөлікті кросс-валидацияны және AUC-ты көрсетеді — кездейсоқ deepfake-тің P мәні кездейсоқ нақты фотодан жоғары болу ықтималдығы (0,5 — кездейсоқ болжам, 1 — мінсіз).",
+lim_h:"Шектеулер",
+lim:"100 % дәлдік болмайды: әр белгі генераторлардың нақты кемшілігіне сүйенеді, ал жаңа генераторлар оларды түзетеді. Қатты сығу (мессенджерлер, скриншоттар) Лаплас пен шу белгілерін бұзады. Көз әдісі тек алдыңғы жақтан түсірілген, шағылысы көрінетін фотода жұмыс істейді және MediaPipe үшін интернет қажет. Оқытылған модель тек сіздің деректеріңізді біледі: барлық фейк PNG, ал барлық нақты фото JPEG болса, ол дипфейкті емес, файл пішімін үйренеді. Сондықтан екі топты бірдей дайындау керек, ал әр сурет бөлек түсірілім болуы тиіс.",
+refs_h:"Әдебиеттер",
+d_on_n:"Онлайн дәлдік — модель жауапты білмей тұрып жасаған болжамдардың дәлдігі. Төмендегі қисық оның оқыту барысында қалай өсетінін көрсетеді.",
+d_test:"Өзін-өзі тексеру", d_exp:"Деректерді экспорттау", d_imp:"Деректерді импорттау", d_reset:"Барлығын тазалау",
+d_curve:"Үйрену қисығы", d_cm:"Қателер матрицасы (кросс-валидация)", d_w:"Белгілердің салмақтары",
+d_tab:"Барлық нәтижелер", d_f_all:"Барлығы", d_f_err:"Қателер", d_f_un:"Белгісіз",
+d_err_n:"Қате — өзінсіз оқытылған модель (P_CV) басқа класқа жатқызған сурет. Белгінің өзі қате болса, оны «Белгі» бағанында түзетіңіз — модель бірден қайта үйренеді.",
+d_log:"Оқиғалар мен қателер журналы", d_sys:"Жүйе",
+k_lab:"белгіленген: нақты / deepfake", k_un:"белгісіз", k_model:"модель оқытылған", k_on:"онлайн дәлдік", k_cv:"кросс-валидация",
+yes:"иә", no:"жоқ", d_nocurve:"Модель белгілерді алдын ала болжай бастағанда қисық пайда болады.",
+pr_r:"болжам: нақты", pr_f:"болжам: deepfake", is_r:"шын мәнінде: нақты", is_f:"шын мәнінде: deepfake",
+d_cv_n:"%K бөлікті кросс-валидация: әр сурет оны көрмеген модельмен тексерілді.",
+d_need:"Әр түрден кемінде 5 белгіленген сурет қажет (қазір %R / %F).",
+d_w_n:"Қызыл — белгі deepfake ықтималдығын арттырады, жасыл — азайтады. Белгілер стандартталған, салмақтарды салыстыруға болады.",
+c_name:"Файл", c_lab:"Белгі", c_eye:"Көз", del:"Жою", d_empty:"Әзірге нәтиже жоқ.",
+k_store:"жад", k_all:"барлық сурет", k_sess:"осы сеанстағы карталар",
+t1:"5×5 мысал: +40 қосқанда ∇² өзгермейді", t2:"Лаплас: жарықтық пен контрастқа инварианттылық", t3:"Шу: белгілі шудағы Immerkær бағасы",
+t4:"Шағылыстар: синтетикалық көздер (бірдей / әртүрлі / кішкентай)", t5:"Оқыту: нақты сигналды табады", t6:"Оқыту: кездейсоқ белгілерде ≈ 50 % (ағу жоқ)",
+t7:"Браузер жады жұмыс істейді", t8:"MediaPipe жүктелген",
+imp_q:"Қазіргі деректерді файлдағы деректермен ауыстыру керек пе?", imp_bad:"Бұл осы сайттың деректер файлы емес.", reset_q:"Барлық суретті, белгілерді және оқытылған модельді жою керек пе?"
+};
+
+I18N.en = {
+tab_an:"Analysis", tab_fm:"Formulas", tab_dev:"Developer",
+title:"Mathematical models for detecting Deepfakes in photographs",
+school:"Ybyrai Altynsarin Specialised Boarding School-Gymnasium",
+drop:"Drag images here or click to choose",
+drop_h:"JPEG, PNG, WebP · 256 to 8000 px · many files at once",
+lab_q:"Images being uploaded are:", lab_u:"unknown", lab_r:"Real", lab_f:"Deepfake",
+privacy:"Images never leave your computer: analysis and training run in the browser; only the feature numbers and 64×64 thumbnails are stored.",
+discl:"The result is the model's estimate, not proof. Accuracy is shown as measured on your data; on other images it may be lower.",
+v_lo:"Low probability of deepfake", v_un:"Inconclusive", v_hi:"High probability of deepfake",
+by_lap:"for now by the Laplace model:",
+fb_new:"labelled — the model was not trained yet", fb_ok:"the model got it right beforehand", fb_bad:"the model was wrong — corrected, model retrained",
+st_on:"The model has learned from %N labelled images (real %R, deepfake %F).",
+st_acc:"Online accuracy: %A over %M predictions made before the model knew the answer.",
+st_acc0:"Online accuracy will appear after the next labelled images.",
+st_off:"The model is not trained yet: at least 5 labelled images of each kind are needed (now real %R, deepfake %F). Until then the Laplace model gives the verdict. Label photos with the buttons on the right, or choose a label before uploading.",
+mp_idle:"", mp_loading:"Loading MediaPipe…", mp_ready:"MediaPipe ready.", mp_failed:"MediaPipe unavailable (internet needed) — eye method off.",
+prog:"Processing %D of %T", done:"Done: added %A, skipped %S, duplicates %D.",
+det_old:"Maps are available only for images uploaded in this session.",
+m_lap:"∇²f — Laplace image", m_anom:"Sharpness anomalies", m_noise:"Noise per tile", m_eye:"Irises: 1 · 2 · overlay",
+n_na:"unavailable (%V tiles with noise)",
+e_nomp:"MediaPipe not loaded", e_noface:"no face found", e_small:"eyes too small", e_closed:"eyes closed",
+e_nohl:"no highlights", e_noiris:"irises not found",
+w_th:"The scaling law is broken: θ = %V instead of ≈ 1 — contrast is there, fine detail is missing.",
+w_r2:"Sharpness is weakly tied to contrast (R² = %V).",
+w_psi:"A connected region of overly smooth tiles was found (Ψ = %V) — possibly a paste.",
+w_nz:"The noise level differs across the frame (ν_spr = %V).",
+w_eye:"The highlights in the two eyes do not match (IoU = %V).",
+w_none:"No method found a suspicious trace. This does not prove the image is authentic.",
+err_flat:"There is nothing to analyse: every pixel is the same.",
+err_broken:"The image could not be read.", err_format:"Unsupported format: JPEG, PNG or WebP needed.",
+err_small:"The image is smaller than 256 px.", err_big:"The image is larger than 8000 px or 25 MB.",
+err_store:"Browser storage is full — save your data via Developer → Export.",
+f_in:"Every formula matches the code of this page exactly. Their correctness is checked by the Self-test button on the Developer screen.",
+g_lap:"1. Main model: the Laplace operator",
+f1t:"1.1. From image to numbers",
+f1e:"R, G, B are the red, green and blue values of a pixel (0…255). Y is overall brightness; the BT.601 weights reflect that the eye is most sensitive to green. f is brightness scaled to [0, 1]. The central square of the image is analysed, resized to 512×512 pixels.",
+f2t:"1.2. The Laplace operator",
+f2e:"∇²f is the sum of the second derivatives in x and y. A second derivative shows how the rate of change of brightness itself changes — the 'bend'. In discrete form, four times the pixel's own value is subtracted from the sum of its four neighbours. On a flat area the result is 0; at edges and fine detail it is large in magnitude.",
+f3t:"1.3. Why brightness and contrast do not interfere",
+f3e:"b is added brightness, a is a contrast factor. The second derivative of a constant is zero, so ∇²(f + b) = ∇²f exactly. The factor a comes outside the operator and is removed by normalisation: f̄ is the mean brightness and σ_f the standard deviation of the whole image. A dark or washed-out photo is therefore never flagged because of its brightness.",
+f4t:"1.4. Sharpness and contrast of every patch",
+f4e:"The image is split into tiles B_ij of T × T = 16 × 16 pixels (a 32 × 32 grid). E_ij is the log of the mean Laplacian energy in the tile — how sharp it is. C_ij is the log of the brightness variance in the tile, ḡ_ij its mean brightness — how much 'content' it holds. The logarithm makes their relationship linear.",
+f5t:"1.5. The scaling law",
+f5e:"Each tile is a point (C_ij, E_ij). θ̂ and ĉ are the slope and intercept of the least-squares line; C̄, Ē are means. In real photos θ ≈ 1: the more contrast, the proportionally more fine detail (natural image statistics, Field 1987). A generator keeps the contrast but loses detail, so θ drops. r are the points' departures from the line; R² ∈ [0, 1] shows how tightly the points follow it.",
+f6t:"1.6. Anomaly map and the trace of a paste",
+f6e:"r_ij is a tile's departure from the law, σ_r the standard deviation of all departures, z_ij the departure in units of σ_r. z < −1 means 'too smooth for its own contrast'. K is a connected group of such tiles (neighbours on four sides), and Ψ is the number of tiles in the largest group. A paste leaves one solid region; random noise leaves scattered tiles.",
+f7t:"1.7. The Laplace score before training",
+f7e:"σ(u) is the sigmoid: it maps any number into (0, 1). s₁, s₂, s₃ compare the features with thresholds 0.22, 0.28, 48 on scales 0.07, 0.06, 9. S is the weighted sum (weights 0.35, 0.25, 0.40), from 0 to 100. The thresholds and weights are heuristic: this is how the site works while there is no labelled data. S < 35 is low probability, 35–65 inconclusive, S ≥ 65 high.",
+ex_h:"Worked example, 5 × 5",
+ex_e:"Inside flat regions ∇² is 0; non-zero values appear only at the boundary. After adding 40 to every pixel, not a single cell changes. These numbers are computed by the page's code.",
+g_add:"2. Additional methods",
+f8t:"2.1. Noise consistency (Immerkær 1996; Pan, Zhang, Lyu 2012)",
+f8e:"N is Immerkær's kernel, the difference of two Laplacian masks: it removes smooth structure and keeps noise. f ∗ N is the convolution of the image with the kernel. σ̂_k is the noise estimate in a 32 × 32 tile (T_n = 32); the factor √π/√2 · 1/6 makes it exact for Gaussian noise. Noise is measured in the 40 % most homogeneous tiles. 𝒱 holds the tiles whose noise is at least half a grey level: anything smaller is a trace of JPEG compression, not camera noise. If 𝒱 has fewer than 12 tiles the method honestly reports 'unavailable'. ν_med is the typical noise level and ν_spr its spread (median deviation; 1.4826 brings it to the σ scale). A pasted region brings different noise, so ν_spr grows.",
+f9t:"2.2. Saturation cue (McCloskey, Albright 2019)",
+f9e:"# is a count of pixels and N² their total number. A camera clips the brightest areas at 255 and the darkest at 0, while a GAN's output layer squashes values, so exactly clipped pixels are rare there. κ is the log of their fraction; 10⁻⁵ guards against log 0. The cue is weak: it decides nothing on its own and works only inside the trained model.",
+f10t:"2.3. Eye highlights (Hu, Li, Lyu 2021) + MediaPipe Face Mesh",
+f10e:"MediaPipe finds 478 face points, including the centre (x_c, y_c) and rim of each iris; r is the iris radius. (u, v) are coordinates inside the iris: centre 0, rim 1, so the two eyes are aligned in position and size. μ and s are the mean brightness and its deviation inside the circle, Y_max the brightest point. H is the highlight mask. IoU is the shared part of the two masks divided by their union: in a real photo both eyes reflect the same light sources (IoU near 1); a GAN does not know this (IoU near 0). The method switches off if there is no face, the eyes are closed, the iris is under 5 px or there are no highlights.",
+g_learn:"3. Learning",
+f11t:"3.1. Logistic regression",
+f11e:"x = (x₁ … x₉) are the image's 9 features: |θ − 1|, 1 − R², Ψ, Λ = log₁₀ of mean Laplacian energy, ν_med, ν_spr, κ, 1 − IoU and an 'eyes measured' flag. m_j and s_j are a feature's mean and standard deviation over the labelled images; x̃_j is the standardised feature. w_j is the feature's weight, b the bias. P is the probability that the image is a deepfake. A missing feature is replaced by its mean (x̃ = 0) and has no influence.",
+f12t:"3.2. How the model learns",
+f12e:"n is the number of labelled images, y_i the label (1 deepfake, 0 real), p_i the model's prediction. ℒ is the log loss: it is large when the model is confidently wrong. c_y is the class weight (n_y images in that class) so both classes count equally. λ = 0.05 penalises overly large weights (guards against overfitting). The weights move against the gradient with step η = 0.3 for 1500 steps. The model is retrained immediately after every new label or correction.",
+f13t:"3.3. How accuracy is measured",
+f13e:"Online accuracy: when you label an image, it is first scored by the model p⁽ᵗ⁻¹⁾ trained only on the previous t − 1 labels, and only then added to training. 𝟙[…] is 1 if the prediction (p ≥ 0.5 → deepfake) matched the label y_t; m is the number of such checks. It is therefore an honest accuracy on data not yet seen. The Developer screen also shows 5-fold cross-validation and AUC — the probability that a random deepfake gets a higher P than a random real photo (0.5 is guessing, 1 is perfect).",
+lim_h:"Limitations",
+lim:"There is no 100 % accuracy: every feature relies on a specific flaw of generators, and new generators fix them. Heavy compression (messengers, screenshots) destroys the Laplace and noise features. The eye method needs a frontal face with visible highlights and internet access for MediaPipe. The trained model knows only your data: if every fake is a PNG and every real photo a JPEG, it learns the file format, not deepfakes. Prepare both groups the same way, and make every image a separate shot.",
+refs_h:"References",
+d_on_n:"Online accuracy is the accuracy of predictions made before the model knew the answer. The curve below shows how it grows as the model learns.",
+d_test:"Self-test", d_exp:"Export data", d_imp:"Import data", d_reset:"Clear everything",
+d_curve:"Learning curve", d_cm:"Confusion matrix (cross-validation)", d_w:"Feature weights",
+d_tab:"All results", d_f_all:"All", d_f_err:"Errors", d_f_un:"Unlabelled",
+d_err_n:"An error is an image that a model trained without it (P_CV) puts in the wrong class. If the label itself is wrong, fix it in the Label column — the model retrains at once.",
+d_log:"Event and error log", d_sys:"System",
+k_lab:"labelled: real / deepfake", k_un:"unlabelled", k_model:"model trained", k_on:"online accuracy", k_cv:"cross-validation",
+yes:"yes", no:"no", d_nocurve:"The curve appears once the model starts predicting labels in advance.",
+pr_r:"predicted: real", pr_f:"predicted: deepfake", is_r:"actually: real", is_f:"actually: deepfake",
+d_cv_n:"%K-fold cross-validation: every image was checked by a model that had not seen it.",
+d_need:"At least 5 labelled images of each kind are needed (now %R / %F).",
+d_w_n:"Red raises the deepfake probability, green lowers it. Features are standardised, so weights are comparable.",
+c_name:"File", c_lab:"Label", c_eye:"Eyes", del:"Delete", d_empty:"No results yet.",
+k_store:"storage", k_all:"images in total", k_sess:"with maps this session",
+t1:"5×5 example: ∇² unchanged by +40", t2:"Laplace: brightness and contrast invariance", t3:"Noise: Immerkær estimate on known noise",
+t4:"Highlights: synthetic eyes (same / different / tiny)", t5:"Learning: finds a real signal", t6:"Learning: ≈ 50 % on random labels (no leakage)",
+t7:"Browser storage works", t8:"MediaPipe loaded",
+imp_q:"Replace the current data with the data from the file?", imp_bad:"This is not a data file from this site.", reset_q:"Delete all images, labels and the trained model?"
+};
+
+Object.assign(I18N.ru, {
+is_real:"Помечено: настоящее", is_fake:"Помечено: deepfake",
+model_now:"модель сейчас: P(deepfake) = %P", model_dis:"✗ пока не согласна — нужно ещё несколько похожих примеров",
+legacy:"старый замер без фото — загрузите этот файл снова, метка сохранится",
+st_v6:"Модель учится с первой метки: помечено настоящих %R, deepfake %F. Пока меток мало, ответ близок к оценке Лапласа и сдвигается с каждой меткой.",
+st_old:"%O старых замеров не участвуют в обучении: они сделаны до стандартизации фото. Загрузите эти файлы снова — метки сохранятся.",
+already:"Эта метка уже стоит. Снять метку можно на экране «Разработчик».",
+load_maps:"Показать карты (фото из общей базы)", loading:"Загрузка…", det_fail:"Не удалось загрузить фото.",
+det_link:"Фото хранится в общей базе — откройте сайт по ссылке, чтобы увидеть карты.",
+det_noimg:"Фото этого старого замера не сохранялось. Загрузите файл снова, чтобы увидеть карты.",
+done6:"Готово: добавлено %A, обновлено старых %U, пропущено %S, повторов %D.",
+k_old:"старых замеров (не учатся)", k_img:"фото в общей базе", c_img:"Фото",
+t10:"Обучение: 3 исправления меняют вывод для похожего фото", t11:"Стандартизация: одинаковый результат при 1× и 3× разрешении",
+err_quota_img:"Хранилище фото заполнено — новые фото анализируются, но не сохраняются.",
+priv_c:"Онлайн-режим: общая база хранит для каждого изображения стандартизованную копию фото (1280 px), миниатюру, 9 чисел-признаков и метку. Доступ есть только у вас (вход в аккаунт claude.ai) и у тех, с кем вы поделитесь ссылкой. Загружайте фото других людей только с их согласия.",
+fb_new:"помечено (старый замер — не участвует в обучении)",
+g_std:"0. Стандартизация фото",
+f0t:"0.1. Приведение к одному виду",
+f0e:"Снимок прямо с камеры телефона (12 Мп, своя обработка) и тот же снимок после мессенджера раньше давали разные признаки Лапласа: в эксперименте одно и то же селфи получало S = 43 в разрешении камеры и S = 8 после сжатия. Поэтому каждое фото сначала приводится к одному виду. k — коэффициент уменьшения, W и H — ширина и высота: длинная сторона становится 1280 px. Каждый новый пиксель I′ — среднее старых пикселей I, которые он накрывает; a — площадь перекрытия, |A| — площадь нового пикселя. Затем фото сохраняется в JPEG с качеством 80 %. Уменьшение написано на JavaScript, а не взято из браузера, поэтому одно и то же фото даёт одинаковые числа на телефоне и на компьютере. После этого селфи с камеры получило S = 10.",
+f11t:"3.1. Модель: Лаплас + выученная поправка",
+f11e:"S — оценка Лапласа, logit(S/100) — её логарифм шансов: с него модель начинает. b и w_j — выученная поправка: пока меток нет, они равны нулю и ответ совпадает с Лапласом; с первой же метки поправка начинает меняться. x̃_j — стандартизованные признаки (m_j — среднее, s_j — отклонение по помеченным фото). Так модель учится на исправлениях сразу, а не ждёт, пока наберётся по 5 фото каждого вида.",
+f12t:"3.2. Как модель учится (метод Ньютона)",
+f12e:"ℒ — логарифмическая функция потерь, c_y уравнивает вес классов (n_y — число фото класса). λ = 1 тянет поправку к нулю: одна метка сдвигает ответ, но не переворачивает всё (на ваших данных проверено: более сильная реакция на исправления делает модель неустойчивой). Минимум находится методом Ньютона: θ — вектор (b, w), H — матрица вторых производных, z_i = (1, x̃_i). Метод сходится за 5–10 шагов, поэтому модель переобучается мгновенно после каждой метки.",
+lim:"100 % точности не бывает: каждый признак опирается на конкретный недостаток генераторов, а новые генераторы их исправляют. Сжатие разрушает признаки Лапласа и шума. Обработка фронтальной камеры (сглаживание кожи) похожа для Лапласа на генерацию; стандартизация уменьшает этот эффект, а исправления учат модель «почерку» вашей камеры. Метод глаз требует лица анфас с бликами и в онлайн-версии недоступен (политика безопасности не даёт загрузить MediaPipe). Обученная модель знает только ваши данные: если все фейки пришли через WhatsApp, а все настоящие — с камеры, она может выучить путь файла, а не дипфейк; стандартизация сокращает, но не устраняет этот риск."
+});
+Object.assign(I18N.kk, {
+is_real:"Белгіленді: нақты", is_fake:"Белгіленді: deepfake",
+model_now:"модель қазір: P(deepfake) = %P", model_dis:"✗ әзірге келіспейді — тағы бірнеше ұқсас мысал қажет",
+legacy:"фотосыз ескі өлшем — осы файлды қайта жүктеңіз, белгі сақталады",
+st_v6:"Модель бірінші белгіден бастап үйренеді: белгіленген нақты %R, deepfake %F. Белгі аз болғанда жауап Лаплас бағасына жақын және әр белгімен ығысады.",
+st_old:"%O ескі өлшем оқытуға қатыспайды: олар фотоны стандарттауға дейін жасалған. Осы файлдарды қайта жүктеңіз — белгілер сақталады.",
+already:"Бұл белгі қойылып тұр. Белгіні «Әзірлеуші» экранында алып тастауға болады.",
+load_maps:"Карталарды көрсету (ортақ базадағы фото)", loading:"Жүктелуде…", det_fail:"Фотоны жүктеу мүмкін болмады.",
+det_link:"Фото ортақ базада сақталған — карталарды көру үшін сайтты сілтеме арқылы ашыңыз.",
+det_noimg:"Бұл ескі өлшемнің фотосы сақталмаған. Карталарды көру үшін файлды қайта жүктеңіз.",
+done6:"Дайын: қосылды %A, ескісі жаңартылды %U, өткізілді %S, қайталанған %D.",
+k_old:"ескі өлшемдер (оқымайды)", k_img:"ортақ базадағы фото", c_img:"Фото",
+t10:"Оқыту: 3 түзету ұқсас фотоның қорытындысын өзгертеді", t11:"Стандарттау: 1× және 3× ажыратымдылықта бірдей нәтиже",
+err_quota_img:"Фото қоймасы толды — жаңа фотолар талданады, бірақ сақталмайды.",
+priv_c:"Онлайн режим: ортақ база әр сурет үшін фотоның стандартталған көшірмесін (1280 px), шағын көшірмесін, 9 белгі-санын және белгісін сақтайды. Оған тек сіз (claude.ai аккаунтыңызға кіру арқылы) және сілтемені бөліскен адамдар ғана қол жеткізеді. Басқа адамдардың фотосын тек олардың келісімімен жүктеңіз.",
+fb_new:"белгіленді (ескі өлшем — оқытуға қатыспайды)",
+g_std:"0. Фотоны стандарттау",
+f0t:"0.1. Бір түрге келтіру",
+f0e:"Телефон камерасынан тікелей түскен сурет (12 Мп, өзіндік өңдеу) мен мессенджерден өткен дәл сол сурет бұрын Лапластың әртүрлі белгілерін беретін: экспериментте бір селфи камера ажыратымдылығында S = 43, ал сығылғаннан кейін S = 8 алды. Сондықтан әр фото алдымен бір түрге келтіріледі. k — кішірейту коэффициенті, W мен H — ені мен биіктігі: ұзын жағы 1280 px болады. Әр жаңа пиксель I′ — ол жабатын ескі I пиксельдерінің орташасы; a — қабаттасу ауданы, |A| — жаңа пиксельдің ауданы. Содан кейін фото 80 % сапамен JPEG-ке сақталады. Кішірейту браузерден емес, JavaScript-те жазылған, сондықтан бір фото телефонда да, компьютерде де бірдей сандар береді. Осыдан кейін камерадағы селфи S = 10 алды.",
+f11t:"3.1. Модель: Лаплас + үйренілген түзету",
+f11e:"S — Лаплас бағасы, logit(S/100) — оның шанс логарифмі: модель осыдан бастайды. b және w_j — үйренілген түзету: белгі жоқ кезде олар нөлге тең және жауап Лапласпен сәйкес келеді; бірінші белгіден бастап түзету өзгере бастайды. x̃_j — стандартталған белгілер (m_j — орташа, s_j — белгіленген фотолар бойынша ауытқу). Осылайша модель әр түрден 5 фото жиналуын күтпей, түзетулерден бірден үйренеді.",
+f12t:"3.2. Модель қалай үйренеді (Ньютон әдісі)",
+f12e:"ℒ — логарифмдік шығын функциясы, c_y кластардың салмағын теңестіреді (n_y — кластағы фото саны). λ = 1 түзетуді нөлге тартады: бір белгі жауапты ығыстырады, бірақ бәрін аударып тастамайды (сіздің деректеріңізде тексерілді: түзетулерге тым күшті жауап модельді тұрақсыз етеді). Минимум Ньютон әдісімен табылады: θ — (b, w) векторы, H — екінші туындылар матрицасы, z_i = (1, x̃_i). Әдіс 5–10 қадамда жинақталады, сондықтан модель әр белгіден кейін бірден қайта үйренеді.",
+lim:"100 % дәлдік болмайды: әр белгі генераторлардың нақты кемшілігіне сүйенеді, ал жаңа генераторлар оларды түзетеді. Сығу Лаплас пен шу белгілерін бұзады. Алдыңғы камераның өңдеуі (теріні тегістеу) Лаплас үшін генерацияға ұқсайды; стандарттау бұл әсерді азайтады, ал түзетулер модельге камераңыздың «қолтаңбасын» үйретеді. Көз әдісі шағылысы бар алдыңғы жақтан түсірілген бетті талап етеді және онлайн нұсқада қолжетімсіз (қауіпсіздік саясаты MediaPipe-ты жүктеуге рұқсат бермейді). Оқытылған модель тек сіздің деректеріңізді біледі: барлық фейк WhatsApp арқылы, ал барлық нақты фото камерадан келсе, ол дипфейкті емес, файлдың жолын үйренуі мүмкін; стандарттау бұл қауіпті азайтады, бірақ толық жоймайды."
+});
+Object.assign(I18N.en, {
+is_real:"Labelled: real", is_fake:"Labelled: deepfake",
+model_now:"model now: P(deepfake) = %P", model_dis:"✗ still disagrees — a few more similar examples are needed",
+legacy:"old measurement without photo — upload this file again, the label is kept",
+st_v6:"The model learns from the first label: real %R, deepfake %F labelled. While there are few labels the answer stays close to the Laplace score and shifts with every label.",
+st_old:"%O old measurements are not used for training: they were made before photo standardisation. Upload those files again — the labels are kept.",
+already:"This label is already set. You can remove a label on the Developer screen.",
+load_maps:"Show maps (photo from the shared database)", loading:"Loading…", det_fail:"The photo could not be loaded.",
+det_link:"The photo is stored in the shared database — open the site by its link to see the maps.",
+det_noimg:"The photo of this old measurement was not stored. Upload the file again to see the maps.",
+done6:"Done: added %A, old ones updated %U, skipped %S, duplicates %D.",
+k_old:"old measurements (not trained on)", k_img:"photos in the shared database", c_img:"Photo",
+t10:"Learning: 3 corrections change the verdict for a similar photo", t11:"Standardisation: same result at 1× and 3× resolution",
+err_quota_img:"Photo storage is full — new photos are analysed but not stored.",
+priv_c:"Online mode: for each image the shared database keeps a standardised copy of the photo (1280 px), a thumbnail, the 9 feature numbers and the label. Only you (signed in to your claude.ai account) and people you share the link with can reach it. Upload photos of other people only with their consent.",
+fb_new:"labelled (old measurement — not used for training)",
+g_std:"0. Photo standardisation",
+f0t:"0.1. Bringing every photo to one form",
+f0e:"A shot straight from a phone camera (12 MP, its own processing) and the same shot after a messenger used to give different Laplace features: in a test the same selfie scored S = 43 at camera resolution and S = 8 after compression. So every photo is first brought to one form. k is the scale factor and W, H the width and height: the long side becomes 1280 px. Each new pixel I′ is the average of the old pixels I it covers; a is the overlap area and |A| the area of the new pixel. The photo is then saved as JPEG at 80 % quality. The resize is written in JavaScript rather than taken from the browser, so the same photo gives the same numbers on a phone and on a computer. After this the camera selfie scored S = 10.",
+f11t:"3.1. The model: Laplace + a learned correction",
+f11e:"S is the Laplace score and logit(S/100) its log-odds: the model starts from it. b and w_j are the learned correction: with no labels they are zero and the answer equals Laplace; from the very first label the correction starts to move. x̃_j are the standardised features (m_j the mean, s_j the deviation over labelled photos). The model thus learns from corrections immediately instead of waiting for 5 photos of each kind.",
+f12t:"3.2. How the model learns (Newton's method)",
+f12e:"ℒ is the log loss; c_y balances the classes (n_y photos in a class). λ = 1 pulls the correction towards zero: one label shifts the answer but does not overturn everything (tested on your data: reacting more strongly to corrections made the model unstable). The minimum is found by Newton's method: θ is the vector (b, w), H the matrix of second derivatives, z_i = (1, x̃_i). It converges in 5–10 steps, so the model retrains instantly after every label.",
+lim:"There is no 100 % accuracy: every feature relies on a specific flaw of generators, and new generators fix them. Compression destroys the Laplace and noise features. Front-camera processing (skin smoothing) looks like generation to Laplace; standardisation reduces this, and corrections teach the model your camera's signature. The eye method needs a frontal face with highlights and is unavailable in the online version (the security policy does not allow MediaPipe to load). The trained model knows only your data: if every fake came through WhatsApp and every real photo from the camera, it may learn the file's route rather than the deepfake; standardisation reduces but does not remove this risk."
+});
+var REFS = [
+ ["Laplace, P.-S.", "Traité de mécanique céleste, t. III", "1799", ""],
+ ["Marr, D., Hildreth, E.", "Theory of Edge Detection", "Proc. Royal Society B, 207, 187–217, 1980", "https://doi.org/10.1098/rspb.1980.0020"],
+ ["Gonzalez, R. C., Woods, R. E.", "Digital Image Processing, 4th ed., §3.6", "Pearson, 2018", ""],
+ ["Pech-Pacheco, J. L., et al.", "Diatom Autofocusing in Brightfield Microscopy: A Comparative Study", "ICPR 2000, 314–317", "https://doi.org/10.1109/ICPR.2000.903548"],
+ ["Field, D. J.", "Relations between the statistics of natural images and the response properties of cortical cells", "JOSA A, 4(12), 2379–2394, 1987", "https://doi.org/10.1364/JOSAA.4.002379"],
+ ["Li, L., Bao, J., et al.", "Face X-Ray for More General Face Forgery Detection", "CVPR 2020, 5001–5010", "https://doi.org/10.1109/CVPR42600.2020.00505"],
+ ["Immerkær, J.", "Fast Noise Variance Estimation", "Computer Vision and Image Understanding, 64(2), 300–302, 1996", "https://doi.org/10.1006/cviu.1996.0060"],
+ ["Pan, X., Zhang, X., Lyu, S.", "Exposing Image Splicing with Inconsistent Local Noise Variances", "IEEE ICCP 2012", "https://doi.org/10.1109/ICCPhot.2012.6215223"],
+ ["Lyu, S., Pan, X., Zhang, X.", "Exposing Region Splicing Forgeries with Blind Local Noise Estimation", "IJCV, 110(2), 202–221, 2014", "https://doi.org/10.1007/s11263-013-0688-y"],
+ ["McCloskey, S., Albright, M.", "Detecting GAN-Generated Imagery Using Saturation Cues", "IEEE ICIP 2019, 4584–4588", "https://doi.org/10.1109/ICIP.2019.8803661"],
+ ["Hu, S., Li, Y., Lyu, S.", "Exposing GAN-Generated Faces Using Inconsistent Corneal Specular Highlights", "IEEE ICASSP 2021, 2500–2504", "https://doi.org/10.1109/ICASSP39728.2021.9414582"],
+ ["Kartynnik, Y., Ablavatski, A., Grishchenko, I., Grundmann, M.", "Real-time Facial Surface Geometry from Monocular Video on Mobile GPUs (MediaPipe Face Mesh)", "arXiv:1907.06724, 2019", "https://arxiv.org/abs/1907.06724"],
+ ["Ablavatski, A., et al.", "Real-time Pupil Tracking from Monocular Video for Digital Puppetry (MediaPipe Iris)", "arXiv:2006.11341, 2020", "https://arxiv.org/abs/2006.11341"],
+ ["Cox, D. R.", "The Regression Analysis of Binary Sequences", "J. Royal Statistical Society B, 20(2), 215–242, 1958", "https://doi.org/10.1111/j.2517-6161.1958.tb00292.x"],
+ ["Dawid, A. P.", "Present Position and Potential Developments: Some Personal Views. Statistical Theory: The Prequential Approach", "J. Royal Statistical Society A, 147(2), 278–292, 1984", ""],
+ ["Kohavi, R.", "A Study of Cross-Validation and Bootstrap for Accuracy Estimation and Model Selection", "IJCAI 1995, 1137–1143", ""]
+];
+
+Object.assign(I18N.ru, {
+privacy:"Локальный режим: всё хранится только на этом компьютере — изображения никуда не отправляются.",
+priv_c:"Онлайн-режим: общая база хранит только 9 чисел-признаков и метку каждого изображения и доступна лишь вам (вход в ваш аккаунт claude.ai) и тем, с кем вы поделитесь ссылкой. Сами изображения и миниатюры не покидают устройство.",
+sy_local:"Локальный режим (сайт открыт файлом): данные только на этом устройстве. Для синхронизации откройте сайт по ссылке claude.ai.",
+sy_conn:"Подключение к общей базе…",
+sy_on:"Синхронизация включена: в общей базе %N изображений, изменения видны на всех ваших устройствах.",
+sy_off:"Общая база недоступна — изменения сохраняются только на этом устройстве и отправятся при следующем подключении.",
+sy_ro:"Общая база открыта только для чтения: у этого аккаунта нет права изменять данные.",
+sy_wr:"Сохраняется: %P…",
+mp_blocked:"Метод бликов в глазах работает только в файловой версии сайта: онлайн-страница не может загрузить модель MediaPipe.",
+e_blocked:"только в файловой версии",
+no_th:"Миниатюра есть только на устройстве, где загружено фото",
+err_quota:"Общая база заполнена (лимит платформы — 5 000 записей). Удалите ненужные изображения на экране разработчика.",
+imp_ok:"Импортировано: %N изображений.",
+reset_q:"Нажмите ещё раз, чтобы удалить всё",
+reset_q_c:"Нажмите ещё раз: удалить всё на ВСЕХ устройствах",
+reset_ok:"Все данные удалены.",
+k_mode:"режим хранения",
+t9:"Общая база подключена"
+});
+Object.assign(I18N.kk, {
+privacy:"Жергілікті режим: бәрі тек осы компьютерде сақталады — суреттер ешқайда жіберілмейді.",
+priv_c:"Онлайн режим: ортақ база әр суреттің тек 9 белгі-санын және белгісін сақтайды, оған тек сіз (claude.ai аккаунтыңызға кіру арқылы) және сілтемені бөліскен адамдар ғана қол жеткізеді. Суреттердің өзі мен шағын көшірмелері құрылғыдан шықпайды.",
+sy_local:"Жергілікті режим (сайт файл ретінде ашылған): деректер тек осы құрылғыда. Синхрондау үшін сайтты claude.ai сілтемесі арқылы ашыңыз.",
+sy_conn:"Ортақ базаға қосылуда…",
+sy_on:"Синхрондау қосулы: ортақ базада %N сурет бар, өзгерістер барлық құрылғыларыңызда көрінеді.",
+sy_off:"Ортақ база қолжетімсіз — өзгерістер тек осы құрылғыда сақталады және келесі қосылғанда жіберіледі.",
+sy_ro:"Ортақ база тек оқуға ашық: бұл аккаунтта деректерді өзгерту құқығы жоқ.",
+sy_wr:"Сақталуда: %P…",
+mp_blocked:"Көздегі шағылыс әдісі тек сайттың файлдық нұсқасында жұмыс істейді: онлайн бет MediaPipe моделін жүктей алмайды.",
+e_blocked:"тек файлдық нұсқада",
+no_th:"Шағын көшірме тек фото жүктелген құрылғыда бар",
+err_quota:"Ортақ база толды (платформа шегі — 5 000 жазба). Әзірлеуші экранында қажетсіз суреттерді жойыңыз.",
+imp_ok:"Импортталды: %N сурет.",
+reset_q:"Бәрін жою үшін тағы бір рет басыңыз",
+reset_q_c:"Тағы басыңыз: БАРЛЫҚ құрылғылардағы бәрін жою",
+reset_ok:"Барлық деректер жойылды.",
+k_mode:"сақтау режимі",
+t9:"Ортақ база қосылған"
+});
+Object.assign(I18N.en, {
+privacy:"Local mode: everything is stored only on this computer — images are never sent anywhere.",
+priv_c:"Online mode: the shared database keeps only the 9 feature numbers and the label of each image, and only you (signed in to your claude.ai account) and people you share the link with can reach it. The images and thumbnails never leave the device.",
+sy_local:"Local mode (the site is opened as a file): data stays on this device. To sync, open the site through its claude.ai link.",
+sy_conn:"Connecting to the shared database…",
+sy_on:"Sync on: %N images in the shared database; changes appear on all your devices.",
+sy_off:"The shared database is unavailable — changes are kept on this device and will be sent on the next connection.",
+sy_ro:"The shared database is read-only: this account cannot change data.",
+sy_wr:"Saving: %P…",
+mp_blocked:"The eye-highlight method works only in the file version of the site: the online page cannot load the MediaPipe model.",
+e_blocked:"file version only",
+no_th:"The thumbnail exists only on the device where the photo was uploaded",
+err_quota:"The shared database is full (platform limit: 5,000 records). Delete unneeded images on the Developer screen.",
+imp_ok:"Imported: %N images.",
+reset_q:"Click again to delete everything",
+reset_q_c:"Click again: delete everything on ALL devices",
+reset_ok:"All data deleted.",
+k_mode:"storage mode",
+t9:"Shared database connected"
+});
+"use strict";
+/* =====================================================================
+   CORE: Laplace model (main) + noise, saturation, eye highlights,
+   online logistic regression, storage, self-test.
+   ===================================================================== */
+var N = 512, TILE = 16, NT = 32, MIN_SIDE = 256, MAX_SIDE = 8000, MAX_BYTES = 25 * 1024 * 1024;
+
+function sigm(u) { return 1 / (1 + Math.exp(-u)); }
+function median(a) { return a.length ? a[Math.floor((a.length - 1) / 2)] : NaN; }
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    var t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+/* ---------- Laplace operator: f(x+1,y)+f(x-1,y)+f(x,y+1)+f(x,y-1)-4f(x,y) ---------- */
+function laplacian(g, n) {
+  var o = new Float64Array(n * n), x, y;
+  for (y = 0; y < n; y++) {
+    var r = y * n, u = (y > 0 ? y - 1 : 0) * n, d = (y < n - 1 ? y + 1 : n - 1) * n;
+    for (x = 0; x < n; x++) {
+      var l = x > 0 ? x - 1 : 0, q = x < n - 1 ? x + 1 : n - 1;
+      o[r + x] = g[r + q] + g[r + l] + g[d + x] + g[u + x] - 4 * g[r + x];
+    }
+  }
+  return o;
+}
+function lapSmall(f, m) {
+  var o = [], x, y;
+  for (y = 0; y < m; y++) for (x = 0; x < m; x++) {
+    var l = x > 0 ? x - 1 : 0, q = x < m - 1 ? x + 1 : m - 1, u = y > 0 ? y - 1 : 0, d = y < m - 1 ? y + 1 : m - 1;
+    o.push(f[y * m + q] + f[y * m + l] + f[d * m + x] + f[u * m + x] - 4 * f[y * m + x]);
+  }
+  return o;
+}
+
+function laplaceAnalyse(gray) {
+  var i, x, y, n2 = N * N, m = 0, v = 0;
+  for (i = 0; i < n2; i++) m += gray[i];
+  m /= n2;
+  for (i = 0; i < n2; i++) v += (gray[i] - m) * (gray[i] - m);
+  var sd = Math.sqrt(v / n2);
+  if (sd < 1e-6) { var e = new Error("flat"); e.code = "FLAT"; throw e; }
+  var g = new Float64Array(n2);
+  for (i = 0; i < n2; i++) g[i] = (gray[i] - m) / sd;
+  var L = laplacian(g, N), le = 0;
+  for (i = 0; i < n2; i++) le += L[i] * L[i];
+  var Lambda = Math.log10(le / n2 + 1e-12);
+
+  var W = N / TILE, nT = W * W, E = new Float64Array(nT), C = new Float64Array(nT);
+  for (var ty = 0; ty < W; ty++) for (var tx = 0; tx < W; tx++) {
+    var se = 0, s1 = 0, s2 = 0;
+    for (y = 0; y < TILE; y++) {
+      var row = (ty * TILE + y) * N + tx * TILE;
+      for (x = 0; x < TILE; x++) { var a = L[row + x], b = g[row + x]; se += a * a; s1 += b; s2 += b * b; }
+    }
+    var k = TILE * TILE;
+    E[ty * W + tx] = Math.log10(se / k + 1e-12);
+    C[ty * W + tx] = Math.log10(s2 / k - (s1 / k) * (s1 / k) + 1e-9);
+  }
+  var mC = 0, mE = 0, num = 0, den = 0;
+  for (i = 0; i < nT; i++) { mC += C[i]; mE += E[i]; }
+  mC /= nT; mE /= nT;
+  for (i = 0; i < nT; i++) { num += (C[i] - mC) * (E[i] - mE); den += (C[i] - mC) * (C[i] - mC); }
+  var theta = den > 0 ? num / den : 0, c0 = mE - theta * mC, ssr = 0, sst = 0, r = new Float64Array(nT);
+  for (i = 0; i < nT; i++) { r[i] = E[i] - (theta * C[i] + c0); ssr += r[i] * r[i]; sst += (E[i] - mE) * (E[i] - mE); }
+  var r2 = sst > 0 ? 1 - ssr / sst : 0, rs = Math.sqrt(ssr / nT), z = new Float64Array(nT);
+  for (i = 0; i < nT; i++) z[i] = rs > 1e-9 ? r[i] / rs : 0;
+
+  /* largest 4-connected cluster of tiles with z < -1 */
+  var comp = new Int32Array(nT).fill(-1), best = 0, bestId = -1, id = 0;
+  for (i = 0; i < nT; i++) {
+    if (comp[i] >= 0 || z[i] >= -1) continue;
+    var st = [i], cnt = 0; comp[i] = id;
+    while (st.length) {
+      var c = st.pop(); cnt++;
+      var cx = c % W, cy = (c / W) | 0, nb = [c - 1, c + 1, c - W, c + W], ok = [cx > 0, cx < W - 1, cy > 0, cy < W - 1];
+      for (var j = 0; j < 4; j++) if (ok[j] && comp[nb[j]] < 0 && z[nb[j]] < -1) { comp[nb[j]] = id; st.push(nb[j]); }
+    }
+    if (cnt > best) { best = cnt; bestId = id; }
+    id++;
+  }
+  var s = [sigm((Math.abs(theta - 1) - 0.22) / 0.07), sigm(((1 - r2) - 0.28) / 0.06), sigm((best - 48) / 9)];
+  var S = 100 * (0.35 * s[0] + 0.25 * s[1] + 0.40 * s[2]);
+  return { L: L, W: W, E: E, C: C, z: z, comp: comp, bestId: bestId, theta: theta, r2: r2, Psi: best, Lambda: Lambda, s: s, S: S };
+}
+
+/* ---------- Noise (Immerkaer 1996) with a compression validity gate ---------- */
+function noiseAnalyse(gray) {
+  var W = N / NT, nT = W * W, sig = new Float64Array(nT), tsd = new Float64Array(nT), tm = new Float64Array(nT), x, y, i;
+  var k0 = Math.sqrt(Math.PI / 2) / (6 * (NT - 2) * (NT - 2));
+  for (var ty = 0; ty < W; ty++) for (var tx = 0; tx < W; tx++) {
+    var acc = 0, s1 = 0, s2 = 0, n = 0;
+    for (y = 1; y < NT - 1; y++) for (x = 1; x < NT - 1; x++) {
+      var o = (ty * NT + y) * N + tx * NT + x;
+      acc += Math.abs(gray[o - N - 1] - 2 * gray[o - N] + gray[o - N + 1] - 2 * gray[o - 1] + 4 * gray[o]
+        - 2 * gray[o + 1] + gray[o + N - 1] - 2 * gray[o + N] + gray[o + N + 1]);
+      s1 += gray[o]; s2 += gray[o] * gray[o]; n++;
+    }
+    var t = ty * W + tx; sig[t] = k0 * acc; tm[t] = s1 / n; tsd[t] = Math.sqrt(Math.max(0, s2 / n - tm[t] * tm[t]));
+  }
+  function pick(q) {
+    var srt = Array.from(tsd).sort(function (a, b) { return a - b; }), lim = srt[Math.floor(q * (nT - 1))], out = [];
+    for (i = 0; i < nT; i++) if (tsd[i] <= lim && sig[i] > 1e-7 && tm[i] > 0.03 && tm[i] < 0.97) out.push(i);
+    return out;
+  }
+  var sel = pick(0.4);
+  if (sel.length < 8) sel = pick(0.7);
+  var ls = new Float64Array(nT);
+  for (i = 0; i < nT; i++) ls[i] = Math.log10(sig[i] + 1e-7);
+  var med = sel.length ? median(sel.map(function (k) { return ls[k]; }).sort(function (a, b) { return a - b; })) : -7;
+  var FL = Math.log10(0.5 / 255), val = sel.filter(function (k) { return ls[k] >= FL; }), spr = NaN, avail = val.length >= 12;
+  if (avail) {
+    var V = val.map(function (k) { return ls[k]; }).sort(function (a, b) { return a - b; }), mv = median(V);
+    spr = 1.4826 * median(V.map(function (q) { return Math.abs(q - mv); }).sort(function (a, b) { return a - b; }));
+  }
+  var mark = new Uint8Array(nT);
+  sel.forEach(function (q) { mark[q] = 1; });
+  val.forEach(function (q) { mark[q] = 2; });
+  return { W: W, ls: ls, mark: mark, nSel: sel.length, nVal: val.length, avail: avail, med: med, spr: spr };
+}
+
+/* ---------- Saturation cue (McCloskey & Albright 2019) ---------- */
+function satAnalyse(d) {
+  var n = d.length / 4, c = 0;
+  for (var i = 0; i < n; i++) {
+    var r = d[i * 4], g = d[i * 4 + 1], b = d[i * 4 + 2];
+    if (Math.max(r, g, b) >= 254 || Math.min(r, g, b) <= 1) c++;
+  }
+  return Math.log10(c / n + 1e-5);
+}
+
+/* ---------- Corneal highlights (Hu, Li & Lyu 2021) ---------- */
+var EK = 41, EX = 1.25, ER = 0.95;
+function fullData(img) {
+  var s = Math.min(1, 2048 / Math.max(img.naturalWidth, img.naturalHeight)), w = Math.round(img.naturalWidth * s), h = Math.round(img.naturalHeight * s);
+  var cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+  var c = cv.getContext("2d", { willReadFrequently: true }); c.drawImage(img, 0, 0, w, h);
+  return { d: c.getImageData(0, 0, w, h).data, w: w, h: h };
+}
+function lumAt(D, x, y) {
+  x = Math.min(Math.max(x, 0), D.w - 1); y = Math.min(Math.max(y, 0), D.h - 1);
+  var x0 = Math.floor(x), y0 = Math.floor(y), x1 = Math.min(x0 + 1, D.w - 1), y1 = Math.min(y0 + 1, D.h - 1), fx = x - x0, fy = y - y0;
+  function Y(a, b) { var o = (b * D.w + a) * 4; return (0.299 * D.d[o] + 0.587 * D.d[o + 1] + 0.114 * D.d[o + 2]) / 255; }
+  return (Y(x0, y0) * (1 - fx) + Y(x1, y0) * fx) * (1 - fy) + (Y(x0, y1) * (1 - fx) + Y(x1, y1) * fx) * fy;
+}
+function irisMask(D, e) {
+  var P = new Float64Array(EK * EK), ins = new Uint8Array(EK * EK), i, j, n = 0, s1 = 0, s2 = 0, mx = 0;
+  for (j = 0; j < EK; j++) for (i = 0; i < EK; i++) {
+    var u = -EX + 2 * EX * i / (EK - 1), v = -EX + 2 * EX * j / (EK - 1), k = j * EK + i;
+    P[k] = lumAt(D, e.x + u * e.r, e.y + v * e.r);
+    if (u * u + v * v <= ER * ER) { ins[k] = 1; s1 += P[k]; s2 += P[k] * P[k]; n++; if (P[k] > mx) mx = P[k]; }
+  }
+  var mu = s1 / n, sd = Math.sqrt(Math.max(0, s2 / n - mu * mu)), th = Math.max(mu + 2 * sd, mx - 0.12, 0.5), M = new Uint8Array(EK * EK), cnt = 0;
+  for (i = 0; i < EK * EK; i++) if (ins[i] && P[i] >= th) { M[i] = 1; cnt++; }
+  return { P: P, M: M, cnt: cnt };
+}
+function eyeAnalyse(D, lm) {
+  if (!lm || lm.length < 478) return { st: "noiris" };
+  function p(k) { return { x: lm[k].x * D.w, y: lm[k].y * D.h }; }
+  function iris(c) { var o = p(c), r = 0; for (var k = 1; k < 5; k++) { var q = p(c + k); r += Math.hypot(q.x - o.x, q.y - o.y); } return { x: o.x, y: o.y, r: r / 4 }; }
+  var A = iris(468), B = iris(473), rm = Math.min(A.r, B.r);
+  if (rm < 5) return { st: "small", r: rm };
+  var open = [9, 9];
+  [[159, 145], [386, 374]].forEach(function (pr) {
+    var t = p(pr[0]), b = p(pr[1]), mx = (t.x + b.x) / 2, my = (t.y + b.y) / 2;
+    var ia = Math.hypot(mx - A.x, my - A.y) <= Math.hypot(mx - B.x, my - B.y) ? 0 : 1;
+    open[ia] = Math.min(open[ia], Math.hypot(t.x - b.x, t.y - b.y) / (ia ? B.r : A.r));
+  });
+  if (open[0] < 0.9 || open[1] < 0.9) return { st: "closed" };
+  var a = irisMask(D, A), b = irisMask(D, B), R = { a: a, b: b, r: rm };
+  if (a.cnt < 2 || b.cnt < 2) { R.st = "nohl"; return R; }
+  var I = 0, U = 0;
+  for (var i = 0; i < EK * EK; i++) { if (a.M[i] && b.M[i]) I++; if (a.M[i] || b.M[i]) U++; }
+  R.iou = U ? I / U : 0; R.st = "ok";
+  return R;
+}
+
+/* ---------- MediaPipe Face Landmarker (loaded once, only if online) ---------- */
+var MPB = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+var MPM = "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task";
+/* Opened through the claude.ai link the page runs inside the platform viewer (window.claude exists). */
+var IN_ART = !!(window.claude && typeof window.claude.use === "function");
+var MP = { st: IN_ART ? "blocked" : "idle", lm: null, p: null, t: 0 };
+function tmo(p, ms) { return Promise.race([p, new Promise(function (_, j) { setTimeout(function () { j(new Error("timeout")); }, ms); })]); }
+function loadMP() {
+  if (IN_ART) { MP.st = "blocked"; return Promise.resolve(null); }
+  if (MP.st === "failed" && Date.now() - MP.t > 20000) MP.p = null;
+  if (MP.p) return MP.p;
+  MP.st = "loading"; onMP();
+  MP.p = tmo(import(MPB + "/vision_bundle.mjs"), 30000).then(function (m) {
+    var V = m.FaceLandmarker ? m : (m.default || m);
+    return tmo(V.FilesetResolver.forVisionTasks(MPB + "/wasm"), 30000).then(function (fs) {
+      return tmo(V.FaceLandmarker.createFromOptions(fs, { baseOptions: { modelAssetPath: MPM, delegate: "CPU" }, runningMode: "IMAGE", numFaces: 1 }), 45000);
+    });
+  }).then(function (lm) { MP.lm = lm; MP.st = "ready"; onMP(); log("info", "MediaPipe ready"); return lm; })
+    .catch(function (e) { MP.st = "failed"; MP.t = Date.now(); onMP(); log("warn", "MediaPipe: " + (e && e.message || e)); return null; });
+  return MP.p;
+}
+function faceLm(img) { try { var r = MP.lm.detect(img); return r && r.faceLandmarks && r.faceLandmarks[0] || null; } catch (e) { log("warn", "detect: " + e.message); return null; } }
+
+/* ---------- Feature extraction ---------- */
+var FEATS = ["|θ−1|", "1−R²", "Ψ", "Λ", "ν_med", "ν_spr", "κ", "1−IoU", "eye"];
+function toGrey(img) {
+  var P = pixels(img, 4e6), sd = Math.min(P.w, P.h), sx = (P.w - sd) >> 1, sy = (P.h - sd) >> 1;
+  var d = areaResize(P.d, P.w, sx, sy, sd, sd, N, N), g = new Float64Array(N * N);
+  for (var i = 0; i < N * N; i++) g[i] = (0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2]) / 255;
+  return { g: g, d: d };
+}
+function thumb(img) {
+  var sd = Math.min(img.naturalWidth, img.naturalHeight), cv = document.createElement("canvas"); cv.width = cv.height = 64;
+  cv.getContext("2d").drawImage(img, (img.naturalWidth - sd) >> 1, (img.naturalHeight - sd) >> 1, sd, sd, 0, 0, 64, 64);
+  return cv.toDataURL("image/jpeg", 0.7);
+}
+async function extract(img) {
+  var pre = toGrey(img), lp = laplaceAnalyse(pre.g), nz = noiseAnalyse(pre.g), ka = satAnalyse(pre.d), ey = { st: "nomp" };
+  await loadMP();
+  if (MP.lm) { var lm = faceLm(img); ey = lm ? eyeAnalyse(fullData(img), lm) : { st: "noface" }; }
+  if (MP.st === "blocked") ey = { st: "blocked" };
+  var ok = ey.st === "ok";
+  return {
+    fv: FV, pre: pre, lp: lp, nz: nz, ka: ka, ey: ey,
+    x: [Math.abs(lp.theta - 1), 1 - lp.r2, lp.Psi, lp.Lambda, nz.med, nz.spr, ka, ok ? 1 - ey.iou : NaN, ok ? 1 : 0]
+  };
+}
+
+/* ---------- Standardisation: every photo is brought to one common form ----------
+   A photo straight from a phone camera (12 MP, its own processing) and the
+   same photo after a messenger used to give different Laplace features.
+   Every image is therefore resized by exact area averaging, written here in
+   JS so the numbers are identical in every browser and on every device, to a
+   long side of 1280 px, then re-encoded as JPEG at 80 % quality. */
+var CANON_MAX = 1280, CANON_Q = 0.80, FV = 6;
+function areaResize(src, W, sx, sy, sw, sh, w, h) {
+  var out = new Uint8ClampedArray(w * h * 4), fx = sw / w, fy = sh / h;
+  for (var y = 0; y < h; y++) {
+    var ya = sy + y * fy, yb = ya + fy, y0 = Math.floor(ya), y1 = Math.ceil(yb);
+    for (var x = 0; x < w; x++) {
+      var xa = sx + x * fx, xb = xa + fx, x0 = Math.floor(xa), x1 = Math.ceil(xb), r = 0, g = 0, b = 0, a = 0;
+      for (var yy = y0; yy < y1; yy++) {
+        var wy = Math.min(yb, yy + 1) - Math.max(ya, yy);
+        if (wy <= 0) continue;
+        for (var xx = x0; xx < x1; xx++) {
+          var ww = (Math.min(xb, xx + 1) - Math.max(xa, xx)) * wy;
+          if (ww <= 0) continue;
+          var o = (yy * W + xx) * 4;
+          r += src[o] * ww; g += src[o + 1] * ww; b += src[o + 2] * ww; a += ww;
+        }
+      }
+      var q = (y * w + x) * 4; out[q] = r / a; out[q + 1] = g / a; out[q + 2] = b / a; out[q + 3] = 255;
+    }
+  }
+  return out;
+}
+function pixels(im, maxPx) {
+  var W = im.naturalWidth, H = im.naturalHeight, k = 1;
+  while ((W / k) * (H / k) > maxPx) k *= 2;            /* browser canvas limits (48 MP photos) */
+  var w = Math.round(W / k), h = Math.round(H / k), cv = document.createElement("canvas");
+  cv.width = w; cv.height = h;
+  var c = cv.getContext("2d", { willReadFrequently: true });
+  if (!c) { var e = new Error("canvas"); e.code = "CANVAS"; throw e; }
+  c.drawImage(im, 0, 0, w, h);
+  return { d: c.getImageData(0, 0, w, h).data, w: w, h: h };
+}
+function urlImg(u, revoke) {
+  return new Promise(function (res, rej) {
+    var i = new Image();
+    i.onload = function () { if (revoke) URL.revokeObjectURL(u); res(i); };
+    i.onerror = function () { if (revoke) URL.revokeObjectURL(u); rej(new Error("decode")); };
+    i.src = u;
+  });
+}
+async function canon(im) {
+  var P = pixels(im, 16e6), s = Math.min(1, CANON_MAX / Math.max(P.w, P.h));
+  var w = Math.max(1, Math.round(P.w * s)), h = Math.max(1, Math.round(P.h * s));
+  var cv = document.createElement("canvas"); cv.width = w; cv.height = h;
+  cv.getContext("2d").putImageData(new ImageData(areaResize(P.d, P.w, 0, 0, P.w, P.h, w, h), w, h), 0, 0);
+  var blob = await new Promise(function (r) { cv.toBlob(r, "image/jpeg", CANON_Q); });
+  if (!blob) { var e = new Error("encode"); e.code = "CANVAS"; throw e; }
+  return { blob: blob, im: await urlImg(URL.createObjectURL(blob), true), w: w, h: h };
+}
+
+/* ---------- Learning: Laplace prior + learned correction ----------
+   logit P = logit(S/100) + b + w·x~. With no labels P equals the Laplace
+   score; from the first label on, (b, w) correct it. Newton's method. */
+var LAMBDA = 1;
+function prior(S) { var p = Math.min(0.97, Math.max(0.03, S / 100)); return Math.log(p / (1 - p)); }
+function stdz(X) {
+  var d = X[0].length, m = [], s = [], c = [], i, j;
+  for (j = 0; j < d; j++) { m[j] = 0; s[j] = 0; c[j] = 0; }
+  X.forEach(function (x) { for (j = 0; j < d; j++) if (x[j] != null && !isNaN(x[j])) { m[j] += x[j]; c[j]++; } });
+  for (j = 0; j < d; j++) m[j] = c[j] ? m[j] / c[j] : 0;
+  X.forEach(function (x) { for (j = 0; j < d; j++) if (x[j] != null && !isNaN(x[j])) s[j] += (x[j] - m[j]) * (x[j] - m[j]); });
+  for (j = 0; j < d; j++) { s[j] = c[j] > 1 ? Math.sqrt(s[j] / (c[j] - 1)) : 1; if (!(s[j] > 1e-9)) s[j] = 1; }
+  return { m: m, s: s };
+}
+function zx(x, S) { return x.map(function (v, j) { return v == null || isNaN(v) ? 0 : (v - S.m[j]) / S.s[j]; }); }
+function solve(A, b) {
+  var n = b.length, M = A.map(function (r, i) { return r.concat([b[i]]); }), i, j, k;
+  for (i = 0; i < n; i++) {
+    var p = i; for (k = i + 1; k < n; k++) if (Math.abs(M[k][i]) > Math.abs(M[p][i])) p = k;
+    var t = M[i]; M[i] = M[p]; M[p] = t;
+    for (k = i + 1; k < n; k++) { var f = M[k][i] / M[i][i]; for (j = i; j <= n; j++) M[k][j] -= f * M[i][j]; }
+  }
+  var x = new Array(n);
+  for (i = n - 1; i >= 0; i--) { var s = M[i][n]; for (j = i + 1; j < n; j++) s -= M[i][j] * x[j]; x[i] = s / M[i][i]; }
+  return x;
+}
+function trainLR(X, y, O) {
+  var n = X.length; if (!n) return null;
+  var S = stdz(X), Z = X.map(function (x) { return [1].concat(zx(x, S)); }), d = Z[0].length, th = new Array(d).fill(0), i, j, k, it;
+  var n1 = 0; for (i = 0; i < n; i++) n1 += y[i];
+  var both = n1 > 0 && n1 < n, c1 = both ? n / (2 * n1) : 1, c0 = both ? n / (2 * (n - n1)) : 1;
+  for (it = 0; it < 25; it++) {
+    var g = new Array(d).fill(0), H = [];
+    for (j = 0; j < d; j++) H.push(new Array(d).fill(0));
+    for (i = 0; i < n; i++) {
+      var z = O[i]; for (j = 0; j < d; j++) z += th[j] * Z[i][j];
+      var p = sigm(z), c = y[i] ? c1 : c0, r = c * (p - y[i]), q = c * p * (1 - p);
+      for (j = 0; j < d; j++) { g[j] += r * Z[i][j]; for (k = 0; k < d; k++) H[j][k] += q * Z[i][j] * Z[i][k]; }
+    }
+    for (j = 0; j < d; j++) { g[j] += LAMBDA * th[j]; H[j][j] += LAMBDA; }
+    var st = solve(H, g), mx = 0;
+    for (j = 0; j < d; j++) { th[j] -= st[j]; mx = Math.max(mx, Math.abs(st[j])); }
+    if (!(mx > 1e-9)) break;
+  }
+  return { m: S.m, s: S.s, b: th[0], w: th.slice(1) };
+}
+function predLR(M, x, o) {
+  if (!M) return sigm(o);
+  var z = zx(x, M), s = o + M.b;
+  for (var j = 0; j < z.length; j++) s += M.w[j] * z[j];
+  return sigm(s);
+}
+function crossVal(X, y, O, k, seed) {
+  var rnd = mulberry32(seed), g = [[], []], fold = [], pr = [], accs = [], i;
+  y.forEach(function (v, q) { g[v].push(q); });
+  g.forEach(function (a) {
+    for (var q = a.length - 1; q > 0; q--) { var r = Math.floor(rnd() * (q + 1)), t = a[q]; a[q] = a[r]; a[r] = t; }
+    a.forEach(function (q, r) { fold[q] = r % k; });
+  });
+  for (var f = 0; f < k; f++) {
+    var tx = [], ty = [], to = [], te = [];
+    for (i = 0; i < y.length; i++) { if (fold[i] === f) te.push(i); else { tx.push(X[i]); ty.push(y[i]); to.push(O[i]); } }
+    if (!te.length) continue;
+    var M = trainLR(tx, ty, to), ok = 0;
+    te.forEach(function (q) { pr[q] = predLR(M, X[q], O[q]); if ((pr[q] >= 0.5 ? 1 : 0) === y[q]) ok++; });
+    accs.push(ok / te.length);
+  }
+  var cm = { tp: 0, tn: 0, fp: 0, fn: 0 }, pos = [], neg = [], wins = 0;
+  for (i = 0; i < y.length; i++) {
+    var h = pr[i] >= 0.5 ? 1 : 0;
+    cm[y[i] ? (h ? "tp" : "fn") : (h ? "fp" : "tn")]++;
+    (y[i] ? pos : neg).push(pr[i]);
+  }
+  pos.forEach(function (p) { neg.forEach(function (q) { wins += p > q ? 1 : p === q ? 0.5 : 0; }); });
+  var mean = accs.reduce(function (a, b) { return a + b; }, 0) / accs.length;
+  var sd = Math.sqrt(accs.reduce(function (a, b) { return a + (b - mean) * (b - mean); }, 0) / Math.max(1, accs.length - 1));
+  return { k: k, acc: (cm.tp + cm.tn) / y.length, sd: sd, auc: wins / Math.max(1, pos.length * neg.length), cm: cm, pr: pr };
+}
+
+/* ---------- Samples, online learning, storage (shared db when opened by link) ---------- */
+var SAMPLES = [], MODEL = null, CV = null, SESSION = {}, LOG = [], TH = {};
+var KS = "dfL5.samples", KL = "dfL5.log", KT = "dfL5.thumbs";
+var CLOUD = { st: IN_ART ? "conn" : "local", db: null, n: 0, pushed: false };
+var WQ = Promise.resolve(), WPEND = 0, SCHED = 0;
+function lab() { return SAMPLES.filter(function (s) { return s.y === 0 || s.y === 1; }); }
+/* Only images measured with the current pipeline train the model: features
+   from the old pipeline are not comparable with the standardised ones. */
+function cur(s) { return (s.fv || 0) >= FV; }
+function trainSet() { return lab().filter(cur); }
+function counts() { var c = { r: 0, f: 0, old: 0 }; lab().forEach(function (s) { if (!cur(s)) c.old++; else if (s.y) c.f++; else c.r++; }); return c; }
+function retrain() {
+  var L = trainSet();
+  MODEL = L.length ? trainLR(L.map(function (s) { return s.x; }), L.map(function (s) { return s.y; }), L.map(function (s) { return prior(s.S); })) : null;
+  CV = null;
+}
+function prob(s) { return predLR(MODEL, s.x, prior(s.S)); }
+function getCV() {
+  var c = counts();
+  if (CV || c.r < 3 || c.f < 3) return CV;
+  var L = trainSet(), k = Math.min(5, c.r, c.f);
+  CV = crossVal(L.map(function (s) { return s.x; }), L.map(function (s) { return s.y; }), L.map(function (s) { return prior(s.S); }), k, 20260927);
+  CV.oof = {};
+  L.forEach(function (s, i) { CV.oof[s.id] = CV.pr[i]; });
+  return CV;
+}
+/* test-then-train: the prediction is recorded BEFORE the model sees the label.
+   lt is a timestamp, so the labelling order is consistent across devices. */
+function setLabel(s, y) {
+  if (s.y !== 0 && s.y !== 1) { s.pb = cur(s) ? prob(s) : null; s.lt = Date.now(); }
+  s.y = y; retrain(); persist(s);
+}
+function unLabel(s) { s.y = null; s.pb = null; s.lt = null; retrain(); persist(s); }
+function online() {
+  var R = trainSet().filter(function (s) { return s.pb != null; }).sort(function (a, b) { return a.lt - b.lt; });
+  var hits = R.map(function (s) { return (s.pb >= 0.5 ? 1 : 0) === s.y ? 1 : 0; });
+  return { n: hits.length, acc: hits.length ? hits.reduce(function (a, b) { return a + b; }, 0) / hits.length : NaN, hits: hits };
+}
+function jx(x) { return x.map(function (v) { return v == null || isNaN(v) ? null : v; }); }
+function num(v) { return typeof v === "number" && isFinite(v) ? v : null; }
+/* A shared document holds only the 9 numbers and the label — never the picture. */
+function toDoc(s) {
+  return { name: s.name, key: s.key, x: jx(s.x), S: s.S, th: s.th, na: s.na, es: s.es,
+    y: s.y === 0 || s.y === 1 ? s.y : null, pb: num(s.pb), lt: num(s.lt), t: s.t,
+    fv: num(s.fv) || 0, tb: s.tb || TH[s.id] || null, img: s.img || null };
+}
+/* Shared data is untrusted: every field is validated before use. */
+function fromDoc(id, d) {
+  if (!d || !Array.isArray(d.x) || d.x.length !== 9) return null;
+  var tb = typeof d.tb === "string" && d.tb.indexOf("data:image/jpeg;base64,") === 0 && d.tb.length < 40000 ? d.tb : null;
+  var img = typeof d.img === "string" && /^[0-9a-f]{32}$/.test(d.img) ? d.img : null;
+  return { id: String(id), name: String(d.name || "").slice(0, 120), key: String(d.key || ""),
+    x: d.x.map(function (v) { var q = num(v); return q === null ? NaN : q; }),
+    S: num(d.S) || 0, th: num(d.th) || 0, na: d.na ? 1 : 0, es: String(d.es || "").slice(0, 12),
+    y: d.y === 0 || d.y === 1 ? d.y : null, pb: num(d.pb), lt: num(d.lt), t: num(d.t) || 0,
+    fv: num(d.fv) || 0, tb: tb, img: img };
+}
+function saveLocal() {
+  try { localStorage.setItem(KS, JSON.stringify(SAMPLES.map(function (s) { var o = toDoc(s); o.id = s.id; o.pend = s.pend ? 1 : 0; return o; }))); return true; }
+  catch (e) { log("error", "storage: " + e.message); showErr("err_store"); return false; }
+}
+function saveTh() {
+  var ids = Object.keys(TH);
+  if (ids.length > 400) ids.slice(0, ids.length - 400).forEach(function (k) { delete TH[k]; });
+  try { localStorage.setItem(KT, JSON.stringify(TH)); } catch (e) { log("warn", "thumbnails not cached: " + e.message); }
+}
+function saveLog() { try { localStorage.setItem(KL, JSON.stringify(LOG.slice(-200))); } catch (e) {} }
+function load() {
+  try {
+    var a = JSON.parse(localStorage.getItem(KS) || "[]");
+    if (Array.isArray(a)) SAMPLES = a.map(function (o) { var s = fromDoc(o.id, o); if (s) s.pend = o.pend ? 1 : 0; return s; }).filter(Boolean);
+    TH = JSON.parse(localStorage.getItem(KT) || "{}") || {};
+    LOG = JSON.parse(localStorage.getItem(KL) || "[]") || [];
+  } catch (e) { log("error", "load: " + e.message); }
+  retrain();
+}
+function persist(s) {
+  if (CLOUD.db && CLOUD.st === "sync") { s.pend = 0; write(s.id, toDoc(s)); }
+  else if (IN_ART && CLOUD.st !== "ro") s.pend = 1;
+  saveLocal();
+}
+function removeSample(id) {
+  var gone = SAMPLES.find(function (q) { return q.id === id; });
+  if (gone && gone.img && CLOUD.assets) CLOUD.assets.delete(gone.img).catch(function (e) { log("warn", "photo delete: " + (e && e.code)); });
+  SAMPLES = SAMPLES.filter(function (q) { return q.id !== id; });
+  delete SESSION[id]; delete TH[id];
+  retrain(); saveLocal(); saveTh();
+  if (CLOUD.db && CLOUD.st === "sync") write(id, null);
+}
+/* One write at a time for the whole page: respects the one-write-per-document
+   rule and the concurrency budget, and keeps bulk imports and resets orderly. */
+function write(id, data) {
+  WPEND++; onSync();
+  WQ = WQ.then(function () {
+    if (!CLOUD.db || CLOUD.st !== "sync") return;
+    var ref = CLOUD.db.collection("samples").doc(id);
+    var go = function () { return data ? ref.set(data) : ref.delete(); };
+    return go().catch(function (e) {
+      if (e && e.code === "unavailable") return new Promise(function (r) { setTimeout(r, 500 + Math.random() * 700); }).then(go);
+      throw e;
+    });
+  }).catch(dbErr).then(function () { WPEND--; onSync(); });
+  return WQ;
+}
+function dbErr(e) {
+  var c = (e && e.code) || "unavailable";
+  log("error", "db: " + c + " " + ((e && e.message) || ""));
+  if (c === "invalid_argument") CLOUD.st = "ro";
+  else if (c === "quota_exceeded") showErr("err_quota");
+  else if (c === "revoked" || c === "not_granted" || /^capability|transform/.test(c)) { CLOUD.st = "off"; CLOUD.db = null; }
+  onSync();
+}
+function schedule() {
+  clearTimeout(SCHED);
+  SCHED = setTimeout(function () { retrain(); saveLocal(); if (typeof onData === "function") onData(); }, 120);
+}
+function subscribe() {
+  CLOUD.db.collection("samples").limit(1000).onSnapshot(function (snap) {
+    var got = {}, list = [];
+    snap.docs.forEach(function (d) { if (!d.exists) return; var s = fromDoc(d.id, d.data()); if (s) { list.push(s); got[s.id] = 1; if (s.tb && !TH[s.id]) TH[s.id] = s.tb; } });
+    var pend = SAMPLES.filter(function (s) { return s.pend && !got[s.id]; });
+    SAMPLES = list.concat(pend).sort(function (a, b) { return a.t - b.t; });
+    CLOUD.n = snap.size;
+    if (!CLOUD.thPushed) {
+      CLOUD.thPushed = true;
+      var share = list.filter(function (q) { return !q.tb && TH[q.id]; });
+      if (share.length) setTimeout(function () { share.forEach(function (q) { q.tb = TH[q.id]; write(q.id, toDoc(q)); }); log("info", "shared " + share.length + " thumbnails"); }, 0);
+      saveTh();
+    }
+    if (!CLOUD.pushed) {
+      CLOUD.pushed = true;
+      setTimeout(function () { pend.forEach(function (s) { s.pend = 0; write(s.id, toDoc(s)); }); saveLocal(); }, 0);
+    }
+    schedule(); onSync();
+  }, function (e) {
+    dbErr(e);
+    if (e && e.code === "unavailable" && CLOUD.db) setTimeout(subscribe, 3000);
+  });
+}
+async function connectCloud() {
+  if (!IN_ART) return;
+  var db = null;
+  try { db = await window.claude.use("db"); } catch (e) { db = null; }
+  if (!db) { CLOUD.st = "off"; onSync(); log("warn", "shared db unavailable"); return; }
+  CLOUD.db = db; CLOUD.st = "sync"; onSync(); log("info", "shared db connected");
+  try { CLOUD.assets = await window.claude.use("assets"); } catch (e) { CLOUD.assets = null; }
+  log(CLOUD.assets ? "info" : "warn", CLOUD.assets ? "photo storage connected" : "photo storage unavailable");
+  subscribe();
+}
+function log(l, m) {
+  LOG.push({ t: new Date().toISOString().slice(0, 19).replace("T", " "), l: l, m: String(m) });
+  if (LOG.length > 200) LOG.shift();
+  saveLog();
+  if (typeof onLog === "function") onLog();
+}
+window.addEventListener("error", function (e) { log("error", (e.message || "error") + (e.lineno ? " @" + e.lineno : "")); });
+window.addEventListener("unhandledrejection", function (e) { log("error", e.reason && e.reason.message || e.reason); });
+
+/* ---------- Self-test: every claim on the Formulas screen is checked here ---------- */
+function synthEyes(ha, hb, r) {
+  var W = 600, H = 300, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+  var c = cv.getContext("2d"), E = [{ x: 200, y: 150 }, { x: 400, y: 150 }], lm = [], k;
+  c.fillStyle = "#d9b89c"; c.fillRect(0, 0, W, H);
+  E.forEach(function (e, i) {
+    var h = i ? hb : ha;
+    c.fillStyle = "#f2f2f2"; c.beginPath(); c.ellipse(e.x, e.y, r * 2.2, r * 1.3, 0, 0, 7); c.fill();
+    c.fillStyle = "#4a3222"; c.beginPath(); c.arc(e.x, e.y, r, 0, 7); c.fill();
+    c.fillStyle = "#111"; c.beginPath(); c.arc(e.x, e.y, r * .45, 0, 7); c.fill();
+    c.fillStyle = "#fff"; c.beginPath(); c.arc(e.x + h[0] * r, e.y + h[1] * r, r * .16, 0, 7); c.fill();
+  });
+  for (k = 0; k < 478; k++) lm.push({ x: .5, y: .5 });
+  function put(q, x, y) { lm[q] = { x: x / W, y: y / H }; }
+  [[468, E[0]], [473, E[1]]].forEach(function (a) { var q = a[0], e = a[1]; put(q, e.x, e.y); put(q + 1, e.x + r, e.y); put(q + 2, e.x, e.y - r); put(q + 3, e.x - r, e.y); put(q + 4, e.x, e.y + r); });
+  put(159, E[0].x, E[0].y - r * 1.25); put(145, E[0].x, E[0].y + r * 1.25); put(386, E[1].x, E[1].y - r * 1.25); put(374, E[1].x, E[1].y + r * 1.25);
+  return eyeAnalyse({ d: c.getImageData(0, 0, W, H).data, w: W, h: H }, lm);
+}
+function selfTest() {
+  var R = [], rnd = mulberry32(5), i, x, y;
+  function add(k, ok, v) { R.push({ k: k, ok: ok, v: v }); }
+  function gauss() { var u = rnd() || 1e-9; return Math.sqrt(-2 * Math.log(u)) * Math.cos(6.2832 * rnd()); }
+  var f = [60,60,60,60,60, 60,60,60,60,60, 60,60,60,140,140, 60,60,60,140,140, 60,60,60,140,140];
+  add("t1", lapSmall(f, 5).join() === lapSmall(f.map(function (v) { return v + 40; }), 5).join(), "∇²f = ∇²(f+40)");
+
+  var g = new Float64Array(N * N);
+  for (y = 0; y < N; y++) for (x = 0; x < N; x++)
+    g[y * N + x] = 0.5 + 0.2 * Math.sin(x * 0.05) * Math.cos(y * 0.07) + 0.03 * gauss() + (x > 200 && x < 330 && y > 180 && y < 320 ? 0.15 : 0);
+  var A = laplaceAnalyse(g), B = laplaceAnalyse(g.map(function (v) { return 0.6 * v + 0.3; }));
+  var dd = Math.max(Math.abs(A.theta - B.theta), Math.abs(A.r2 - B.r2), Math.abs(A.S - B.S), A.Psi === B.Psi ? 0 : 1);
+  add("t2", dd < 1e-9, "Δ = " + dd.toExponential(1));
+
+  var h = new Float64Array(N * N);
+  for (i = 0; i < N * N; i++) h[i] = 0.5 + 0.02 * gauss();
+  var est = Math.pow(10, noiseAnalyse(h).med);
+  add("t3", Math.abs(est / 0.02 - 1) < 0.1, "σ = 0,020 → σ̂ = " + est.toFixed(4));
+
+  var e1 = synthEyes([.35, -.35], [.35, -.35], 30), e2 = synthEyes([.35, -.35], [-.4, .3], 30), e3 = synthEyes([.35, -.35], [.35, -.35], 4);
+  add("t4", e1.st === "ok" && e1.iou > 0.9 && e2.st === "ok" && e2.iou < 0.1 && e3.st === "small",
+    "IoU " + (e1.iou || 0).toFixed(2) + " / " + (e2.iou || 0).toFixed(2) + " / " + e3.st);
+
+  function data(n, shift) {
+    var X = [], Y = [], O = [];
+    for (var q = 0; q < n; q++) { var l = q % 2, v = []; for (var j = 0; j < 9; j++) v.push(gauss() + (j < 3 ? l * shift : 0)); X.push(v); Y.push(l); O.push(0); }
+    return [X, Y, O];
+  }
+  var D1 = data(160, 2), D0 = data(160, 0), c1 = crossVal(D1[0], D1[1], D1[2], 5, 1), c0 = crossVal(D0[0], D0[1], D0[2], 5, 1);
+  add("t5", c1.acc > 0.85, "acc = " + (100 * c1.acc).toFixed(1) + "%");
+  add("t6", c0.acc > 0.35 && c0.acc < 0.65, "acc = " + (100 * c0.acc).toFixed(1) + "% (≈ 50%)");
+
+  var okS = false;
+  try { localStorage.setItem("dfL5.t", "1"); okS = localStorage.getItem("dfL5.t") === "1"; localStorage.removeItem("dfL5.t"); } catch (e) {}
+  add("t7", okS, okS ? "localStorage" : "—");
+  add("t8", MP.st === "ready", "MediaPipe: " + MP.st);
+  add("t9", CLOUD.st === "sync", "db: " + CLOUD.st + (CLOUD.st === "sync" ? " · " + CLOUD.n : ""));
+  /* t10: corrections are learned at once. Laplace wrongly says "fake" (S = 75)
+     for camera-like images; after 3 such images are marked real, a 4th,
+     unseen, similar image must come out real. */
+  function cam() { return [0.35 + 0.05 * gauss(), 0.3 + 0.03 * gauss(), 30 + 5 * gauss(), -0.7 + 0.1 * gauss(), -2.35 + 0.1 * gauss(), 0.15 + 0.03 * gauss(), -1.6 + 0.3 * gauss(), NaN, 0]; }
+  var o75 = prior(75), before = predLR(null, cam(), o75), CM = trainLR([cam(), cam(), cam()], [0, 0, 0], [o75, o75, o75]), after = predLR(CM, cam(), o75);
+  add("t10", before >= 0.5 && after < 0.5, Math.round(100 * before) + "% → " + Math.round(100 * after) + "%");
+  /* t11: the standardisation is deterministic and resolution-independent:
+     the same scene at 1× and 3× resolution gives almost the same features. */
+  var c3 = document.createElement("canvas"); c3.width = 1200; c3.height = 900;
+  var x3 = c3.getContext("2d"), r3 = mulberry32(11);
+  for (var k3 = 0; k3 < 400; k3++) { x3.fillStyle = "hsl(" + Math.floor(360 * r3()) + ",40%," + Math.floor(30 + 50 * r3()) + "%)"; x3.fillRect(1200 * r3(), 900 * r3(), 20 + 200 * r3(), 20 + 200 * r3()); }
+  var id3 = x3.getImageData(0, 0, 1200, 900);
+  for (var p3 = 0; p3 < id3.data.length; p3 += 4) { var nn = 6 * gauss(); id3.data[p3] += nn; id3.data[p3 + 1] += nn; id3.data[p3 + 2] += nn; }
+  var big = areaResize(id3.data, 1200, 0, 0, 1200, 900, 3600, 2700), A1 = areaResize(id3.data, 1200, 150, 0, 900, 900, 512, 512), A3 = areaResize(big, 3600, 450, 0, 2700, 2700, 512, 512);
+  function gS(d) { var g = new Float64Array(N * N); for (var q = 0; q < N * N; q++) g[q] = (0.299 * d[q * 4] + 0.587 * d[q * 4 + 1] + 0.114 * d[q * 4 + 2]) / 255; return laplaceAnalyse(g).S; }
+  var s1 = gS(A1), s3 = gS(A3), same = areaResize(id3.data, 1200, 0, 0, 1200, 900, 640, 480).join() === areaResize(id3.data, 1200, 0, 0, 1200, 900, 640, 480).join();
+  add("t11", same && Math.abs(s1 - s3) < 3, "S 1× = " + s1.toFixed(1) + ", S 3× = " + s3.toFixed(1));
+  R.forEach(function (r) { log(r.ok ? "info" : "warn", "self-test " + r.k + ": " + (r.ok ? "PASS" : "FAIL") + " — " + r.v); });
+  return R;
+}
+/* =====================================================================
+   UI
+   ===================================================================== */
+var LANG = "kk", TAB = "an", FILT = "all", OPEN = {}, BUSY = false, LASTT = null;
+function $(i) { return document.getElementById(i); }
+function T(k) { var d = I18N[LANG]; return d && d[k] != null ? d[k] : (I18N.kk[k] != null ? I18N.kk[k] : k); }
+function fmt(v, d) { if (v == null || isNaN(v)) return "—"; var s = v.toFixed(d == null ? 2 : d); return LANG === "en" ? s : s.replace(".", ","); }
+function pct(v) { return v == null || isNaN(v) ? "—" : fmt(100 * v, 1) + "%"; }
+function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return "&#" + c.charCodeAt(0) + ";"; }); }
+function showErr(k) { var e = $("err"); e.dataset.k = k; e.textContent = T(k); e.hidden = false; }
+function hideErr() { var e = $("err"); e.hidden = true; e.textContent = ""; delete e.dataset.k; }
+function tick() { return new Promise(function (r) { setTimeout(r, 0); }); }
+
+/* ---------- verdict of one sample ---------- */
+function verdict(s) {
+  var P = prob(s), v = 100 * P;
+  return { P: P, v: v, cls: v < 35 ? "lo" : v < 65 ? "un" : "hi", key: v < 35 ? "v_lo" : v < 65 ? "v_un" : "v_hi" };
+}
+function eyeWhy(st) { return T("e_" + st); }
+
+/* ---------- analysis list ---------- */
+function rowHTML(s) {
+  var V = verdict(s), fb = "", head;
+  if (s.y === 0 || s.y === 1) {
+    /* the user's label is the answer for this photo; the model's current view is shown beside it */
+    var agree = (V.P >= 0.5 ? 1 : 0) === s.y;
+    head = "<b class='" + (s.y ? "hi" : "lo") + "'>" + T(s.y ? "is_fake" : "is_real") + "</b> <span class='mut sm'>" +
+      T("model_now").replace("%P", pct(V.P)) + " " + (agree ? "<span class='ok'>✓</span>" : "<span class='bad'>" + T("model_dis") + "</span>") + "</span>";
+    fb = s.pb == null ? "<span class='mut'>" + T("fb_new") + "</span>"
+      : ((s.pb >= 0.5 ? 1 : 0) === s.y ? "<span class='ok'>✓ " + T("fb_ok") + "</span>" : "<span class='bad'>✗ " + T("fb_bad") + "</span>");
+  } else head = "<b class='" + V.cls + "'>" + T(V.key) + "</b> <span class='mut sm'>P(deepfake) = " + pct(V.P) + "</span>";
+  var ch = "∇² S=" + fmt(s.S, 1) + " · θ " + fmt(s.th, 2) +
+    " · ν<sub>spr</sub> " + (s.na ? fmt(s.x[5], 2) : "—") + " · κ " + fmt(s.x[6], 2) + " · IoU " + (s.es === "ok" ? fmt(1 - s.x[7], 2) : "—");
+  return "<div class='row' id='r" + s.id + "'><div class='top'>" + thumbHTML(s.id, 56) +
+    "<div class='main' data-open='" + s.id + "'>" + head + "<br>" +
+    "<span class='ch'>" + ch + "</span><br><span class='sm mut'>" + esc(s.name) + (cur(s) ? "" : " · " + T("legacy")) + "</span> <span class='sm'>" + fb + "</span></div>" +
+    "<div class='lab'><button class='r" + (s.y === 0 ? " on" : "") + "' data-set='" + s.id + ":0'>" + T("lab_r") + "</button>" +
+    "<button class='f" + (s.y === 1 ? " on" : "") + "' data-set='" + s.id + ":1'>" + T("lab_f") + "</button></div></div>" +
+    "<div class='det' id='d" + s.id + "'" + (OPEN[s.id] ? "" : " hidden") + "></div></div>";
+}
+function thumbHTML(id, sz) {
+  return TH[id] ? "<img alt='' src='" + TH[id] + "' style='width:" + sz + "px;height:" + sz + "px'>"
+    : "<span class='ph' style='width:" + sz + "px;height:" + sz + "px' title='" + esc(T("no_th")) + "'>∇²</span>";
+}
+function renderList() {
+  var L = SAMPLES.slice().reverse();
+  $("list").innerHTML = L.map(rowHTML).join("");
+  L.forEach(function (s) { if (OPEN[s.id]) renderDet(s); });
+  renderStatus();
+}
+function renderStatus() {
+  var c = counts(), o = online();
+  var t = T("st_v6").replace("%R", c.r).replace("%F", c.f) + " " +
+    (o.n ? T("st_acc").replace("%A", pct(o.acc)).replace("%M", o.n) : T("st_acc0"));
+  if (c.old) t += " " + T("st_old").replace("%O", c.old);
+  $("status").textContent = t + " " + T("mp_" + MP.st);
+}
+function onSync() {
+  var e = $("sync"); if (!e) return;
+  var k = { local: "sy_local", conn: "sy_conn", sync: "sy_on", off: "sy_off", ro: "sy_ro" }[CLOUD.st];
+  e.textContent = T(k).replace("%N", CLOUD.n) + (WPEND ? " " + T("sy_wr").replace("%P", WPEND) : "");
+  e.className = "sm " + (CLOUD.st === "sync" ? "ok" : CLOUD.st === "local" || CLOUD.st === "conn" ? "mut" : "bad");
+  $("priv").textContent = T(IN_ART ? "priv_c" : "privacy");
+  if (TAB === "dev") renderSys();
+}
+function onData() { renderList(); if (TAB === "dev") renderDev(); }
+function onMP() { if ($("status")) renderStatus(); }
+function onLog() { if (TAB === "dev") renderLog(); }
+
+/* ---------- detail maps (only for images analysed in this session) ---------- */
+function cvs(w, h) { var c = document.createElement("canvas"); c.width = w; c.height = h; return c; }
+function fig(c, cap) { var f = document.createElement("figure"); f.appendChild(c); var p = document.createElement("figcaption"); p.textContent = cap; f.appendChild(p); return f; }
+function renderDet(s) {
+  var box = $("d" + s.id); if (!box) return;
+  box.innerHTML = "";
+  var F = SESSION[s.id];
+  if (!F) {
+    box.innerHTML = s.img && CLOUD.st === "sync" ? "<button data-maps='" + s.id + "'>" + T("load_maps") + "</button>"
+      : "<p class='sm mut'>" + T(s.img ? "det_link" : "det_noimg") + "</p>";
+    return;
+  }
+  var lp = F.lp, W = lp.W, px = 256 / W, i;
+  /* 1. Laplace image */
+  var c1 = cvs(256, 256), x1 = c1.getContext("2d"), id = x1.createImageData(256, 256), mx = 0;
+  for (i = 0; i < N * N; i++) mx = Math.max(mx, Math.abs(lp.L[i]));
+  for (var y = 0; y < 256; y++) for (var x = 0; x < 256; x++) {
+    var v = lp.L[(y * 2) * N + x * 2] / (mx * 0.28 || 1); v = Math.max(-1, Math.min(1, v));
+    var q = (y * 256 + x) * 4, p = 128 + v * 127; id.data[q] = id.data[q + 1] = id.data[q + 2] = p; id.data[q + 3] = 255;
+  }
+  x1.putImageData(id, 0, 0);
+  /* 2. anomaly map with the largest cluster outlined */
+  var c2 = cvs(256, 256), x2 = c2.getContext("2d");
+  for (i = 0; i < W * W; i++) {
+    var zz = lp.z[i];
+    x2.fillStyle = zz < -1.6 ? "#b00020" : zz < -1 ? "#e0664f" : zz < -0.4 ? "#e8c35a" : "#e9f3ec";
+    x2.fillRect((i % W) * px, ((i / W) | 0) * px, px, px);
+    if (lp.bestId >= 0 && lp.comp[i] === lp.bestId) { x2.strokeStyle = "#111"; x2.strokeRect((i % W) * px + .5, ((i / W) | 0) * px + .5, px - 1, px - 1); }
+  }
+  /* 3. noise map */
+  var nz = F.nz, c3 = cvs(256, 256), x3 = c3.getContext("2d"), pw = 256 / nz.W, V = [];
+  for (i = 0; i < nz.W * nz.W; i++) if (nz.mark[i] === 2) V.push(nz.ls[i]);
+  V.sort(function (a, b) { return a - b; });
+  var md = median(V), sp = Math.max(nz.spr || 0, 0.05);
+  for (i = 0; i < nz.W * nz.W; i++) {
+    var k = nz.mark[i], zq = k === 2 ? Math.abs(nz.ls[i] - md) / sp : 0;
+    x3.fillStyle = !k ? "#eeeeee" : k === 1 ? "#9fb7cc" : zq < 1 ? "#6fb187" : zq < 2.5 ? "#e8c35a" : "#b00020";
+    x3.fillRect((i % nz.W) * pw + 1, ((i / nz.W) | 0) * pw + 1, pw - 2, pw - 2);
+  }
+  /* 4. eye highlights: iris 1, iris 2, overlay */
+  var c4 = cvs(3 * EK, EK), x4 = c4.getContext("2d"), E = F.ey;
+  x4.fillStyle = "#f4f4f4"; x4.fillRect(0, 0, 3 * EK, EK);
+  if (E.a) for (i = 0; i < EK * EK; i++) {
+    var ex = i % EK, ey = (i / EK) | 0, a = E.a.M[i], b = E.b.M[i];
+    var ga = Math.round(255 * E.a.P[i]), gb = Math.round(255 * E.b.P[i]);
+    x4.fillStyle = a ? "#e0335a" : "rgb(" + ga + "," + ga + "," + ga + ")"; x4.fillRect(ex, ey, 1, 1);
+    x4.fillStyle = b ? "#2a6fdb" : "rgb(" + gb + "," + gb + "," + gb + ")"; x4.fillRect(EK + ex, ey, 1, 1);
+    x4.fillStyle = a && b ? "#6b3fa0" : a ? "#e0335a" : b ? "#2a6fdb" : "#ffffff"; x4.fillRect(2 * EK + ex, ey, 1, 1);
+  }
+  c4.style.imageRendering = "pixelated";
+  box.appendChild(fig(c1, T("m_lap")));
+  box.appendChild(fig(c2, T("m_anom") + " · Ψ = " + lp.Psi));
+  box.appendChild(fig(c3, T("m_noise") + (nz.avail ? " · ν_spr = " + fmt(nz.spr, 2) : " · " + T("n_na").replace("%V", nz.nVal))));
+  var f4 = fig(c4, T("m_eye") + " · " + (E.st === "ok" ? "IoU = " + fmt(E.iou, 2) : eyeWhy(E.st)));
+  f4.style.width = "300px"; box.appendChild(f4);
+  var why = [];
+  if (Math.abs(lp.theta - 1) > 0.18) why.push(T("w_th").replace("%V", fmt(lp.theta, 2)));
+  if (1 - lp.r2 > 0.25) why.push(T("w_r2").replace("%V", fmt(lp.r2, 3)));
+  if (lp.Psi > 40) why.push(T("w_psi").replace("%V", lp.Psi));
+  if (nz.avail && nz.spr >= 0.4) why.push(T("w_nz").replace("%V", fmt(nz.spr, 2)));
+  if (E.st === "ok" && E.iou < 0.15) why.push(T("w_eye").replace("%V", fmt(E.iou, 2)));
+  if (!why.length) why.push(T("w_none"));
+  var p = document.createElement("div"); p.className = "sm"; p.innerHTML = why.map(function (w) { return "<p>" + w + "</p>"; }).join("");
+  box.appendChild(p);
+}
+
+/* ---------- upload: analyse, and learn immediately if a label is chosen ---------- */
+function loadImg(file) {
+  return new Promise(function (res, rej) {
+    var u = URL.createObjectURL(file), im = new Image();
+    im.onload = function () { res({ im: im, u: u }); };
+    im.onerror = function () { URL.revokeObjectURL(u); rej(new Error("broken")); };
+    im.src = u;
+  });
+}
+async function addFiles(files) {
+  if (BUSY) return;
+  var list = Array.from(files || []); if (!list.length) return;
+  var preset = document.querySelector("input[name=lab]:checked").value, yl = preset === "" ? null : +preset;
+  var have = {}; SAMPLES.forEach(function (s) { have[s.key] = s; });
+  BUSY = true; hideErr();
+  var skip = 0, dup = 0, added = 0, upd = 0, why = "";
+  for (var i = 0; i < list.length; i++) {
+    var f = list[i], key = f.name + ":" + f.size, L = null, old = have[key];
+    $("prog").textContent = T("prog").replace("%D", i + 1).replace("%T", list.length) + " · " + f.name;
+    if (old && cur(old)) { dup++; continue; }
+    if (!/^image\/(jpeg|png|webp)$/.test(f.type) && !/\.(jpe?g|png|webp)$/i.test(f.name)) { skip++; why = "err_format"; log("warn", f.name + ": format"); continue; }
+    if (f.size > MAX_BYTES) { skip++; why = "err_big"; log("warn", f.name + ": > 25 MB"); continue; }
+    try {
+      L = await loadImg(f);
+      var im = L.im;
+      if (im.naturalWidth < MIN_SIDE || im.naturalHeight < MIN_SIDE) { skip++; why = "err_small"; log("warn", f.name + ": < 256 px"); continue; }
+      if (im.naturalWidth > MAX_SIDE || im.naturalHeight > MAX_SIDE) { skip++; why = "err_big"; log("warn", f.name + ": > 8000 px"); continue; }
+      var C = await canon(im), F = await extract(C.im), tb = thumb(C.im), img = null;
+      /* the standardised photo itself goes to the shared storage, so every
+         device sees it and a future version can re-measure it */
+      if (CLOUD.assets && CLOUD.st === "sync") {
+        try { img = (await CLOUD.assets.upload(C.blob, { type: "image/jpeg" })).id; }
+        catch (e) { log("warn", "photo upload: " + (e && e.code)); if (e && e.code === "quota_or_state") showErr("err_quota_img"); }
+      }
+      var fill = function (q) {
+        q.x = F.x; q.S = F.lp.S; q.th = F.lp.theta; q.na = F.nz.avail ? 1 : 0; q.es = F.ey.st;
+        q.fv = FV; q.tb = tb; q.img = img; TH[q.id] = tb; SESSION[q.id] = F;
+      };
+      if (old) {
+        /* a photo measured by the old pipeline is uploaded again: re-measure it and keep its label */
+        if (old.img && CLOUD.assets) CLOUD.assets.delete(old.img).catch(function () {});
+        fill(old); saveTh(); retrain(); persist(old); upd++;
+        log("info", "re-measured " + f.name + (old.y != null ? " (label kept)" : ""));
+      } else {
+        var s = { id: Date.now().toString(36) + i + Math.random().toString(36).slice(2, 6), key: key, name: f.name, y: null, pb: null, t: Date.now() };
+        fill(s); saveTh(); SAMPLES.push(s); have[key] = s; added++;
+        if (yl !== null) setLabel(s, yl); else persist(s);
+        if (list.length === 1) OPEN[s.id] = 1;
+      }
+    } catch (e) {
+      skip++;
+      if (e && e.code === "FLAT") { why = "err_flat"; log("warn", f.name + ": flat image"); }
+      else { why = "err_broken"; log("error", f.name + ": " + (e && e.message || e)); }
+    } finally { if (L) URL.revokeObjectURL(L.u); }
+    if (i % 3 === 2 || i === list.length - 1) { renderList(); await tick(); }
+  }
+  BUSY = false;
+  $("prog").textContent = T("done6").replace("%A", added).replace("%U", upd).replace("%S", skip).replace("%D", dup);
+  if (list.length === 1 && skip && why) showErr(why);
+  renderList();
+}
+
+/* ---------- developer screen ---------- */
+function renderDev() {
+  var c = counts(), o = online(), cv = getCV(), un = SAMPLES.length - c.r - c.f - c.old;
+  var k = [
+    [c.r + " / " + c.f, T("k_lab")], [un, T("k_un")], [c.old, T("k_old")],
+    [SAMPLES.filter(function (q) { return q.img; }).length + " / " + SAMPLES.length, T("k_img")],
+    [pct(o.acc) + (o.n ? " (" + o.n + ")" : ""), T("k_on")],
+    [cv ? pct(cv.acc) + " ± " + pct(cv.sd) : "—", T("k_cv")], [cv ? fmt(cv.auc, 3) : "—", "ROC AUC"]
+  ];
+  $("kpi").innerHTML = k.map(function (a) { return "<div><b>" + a[0] + "</b><span>" + a[1] + "</span></div>"; }).join("");
+  /* learning curve: cumulative online accuracy */
+  var cvx = $("curve"), g = cvx.getContext("2d"), W = cvx.width, H = cvx.height, h = o.hits;
+  g.clearRect(0, 0, W, H); g.font = "12px system-ui"; g.fillStyle = "#666";
+  g.strokeStyle = "#ddd"; g.beginPath(); g.moveTo(40, 10); g.lineTo(40, H - 25); g.lineTo(W - 10, H - 25); g.stroke();
+  g.fillText("100%", 4, 16); g.fillText("50%", 10, (H - 25 + 10) / 2 + 4); g.fillText("0%", 14, H - 25);
+  g.setLineDash([4, 4]); g.beginPath(); g.moveTo(40, (H - 15) / 2); g.lineTo(W - 10, (H - 15) / 2); g.stroke(); g.setLineDash([]);
+  if (h.length) {
+    var acc = 0; g.strokeStyle = "#111"; g.lineWidth = 2; g.beginPath();
+    h.forEach(function (v, i) {
+      acc += v; var X = 40 + (W - 50) * (h.length > 1 ? i / (h.length - 1) : 1), Y = (H - 25) - (H - 35) * acc / (i + 1);
+      i ? g.lineTo(X, Y) : g.moveTo(X, Y);
+    });
+    g.stroke(); g.lineWidth = 1;
+    h.forEach(function (v, i) { g.fillStyle = v ? "#1b7a3d" : "#b00020"; g.fillRect(40 + (W - 50) * (h.length > 1 ? i / (h.length - 1) : 1) - 1, H - 20, 3, 6); });
+    g.fillStyle = "#666"; g.fillText(T("k_on") + " · n = " + h.length, 48, 20);
+  } else { g.fillStyle = "#999"; g.fillText(T("d_nocurve"), 48, H / 2); }
+  /* confusion matrix + weights */
+  $("cm").innerHTML = cv ? "<table><tr><th></th><th>" + T("pr_r") + "</th><th>" + T("pr_f") + "</th></tr><tr><th>" + T("is_r") +
+    "</th><td class='ok'>" + cv.cm.tn + "</td><td class='bad'>" + cv.cm.fp + "</td></tr><tr><th>" + T("is_f") + "</th><td class='bad'>" +
+    cv.cm.fn + "</td><td class='ok'>" + cv.cm.tp + "</td></tr></table><p class='sm mut'>" + T("d_cv_n").replace("%K", cv.k) + "</p>"
+    : "<p class='sm mut'>" + T("d_need").replace("%R", c.r).replace("%F", c.f) + "</p>";
+  if (MODEL) {
+    var wm = Math.max.apply(null, MODEL.w.map(Math.abs)) || 1;
+    $("wts").innerHTML = MODEL.w.map(function (w, j) {
+      var len = 50 * Math.abs(w) / wm;
+      return "<div class='wb'><span>" + FEATS[j] + "</span><div><i style='left:" + (w >= 0 ? 50 : 50 - len) + "%;width:" + len +
+        "%;background:" + (w >= 0 ? "#b00020" : "#1b7a3d") + "'></i></div><span>" + (w >= 0 ? "+" : "") + fmt(w, 2) + "</span></div>";
+    }).join("") + "<p class='sm mut'>" + T("d_w_n") + "</p>";
+  } else $("wts").innerHTML = "<p class='sm mut'>—</p>";
+  renderTable(); renderLog(); renderSys();
+  document.querySelectorAll("#filt button").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.f === FILT); });
+}
+function renderTable() {
+  var cv = getCV(), rows = SAMPLES.slice().reverse().filter(function (s) {
+    if (FILT === "un") return s.y == null;
+    if (FILT === "err") { if (s.y == null) return false; var p = cv && cv.oof[s.id] != null ? cv.oof[s.id] : prob(s); return p != null && (p >= 0.5 ? 1 : 0) !== s.y; }
+    return true;
+  });
+  var hd = ["", T("c_name"), T("c_lab"), "P", "P<sub>CV</sub>", "", "S∇²"].concat(FEATS.slice(0, 8)).concat([T("c_eye"), T("c_img"), "fv", ""]);
+  $("tbl").innerHTML = "<tr>" + hd.map(function (h) { return "<th>" + h + "</th>"; }).join("") + "</tr>" +
+    (rows.length ? rows.map(function (s) {
+      var p = prob(s), q = cv && cv.oof[s.id], ref = q != null ? q : p;
+      var res = s.y == null || ref == null ? "" : (ref >= 0.5 ? 1 : 0) === s.y ? "<span class='ok'>✓</span>" : "<span class='bad'>✗</span>";
+      return "<tr><td>" + thumbHTML(s.id, 32) + "</td><td>" + esc(s.name.slice(0, 28)) + "</td><td><select data-rel='" + s.id + "'>" +
+        "<option value=''" + (s.y == null ? " selected" : "") + ">—</option><option value='0'" + (s.y === 0 ? " selected" : "") + ">" + T("lab_r") +
+        "</option><option value='1'" + (s.y === 1 ? " selected" : "") + ">" + T("lab_f") + "</option></select></td><td>" + pct(p) + "</td><td>" +
+        (q != null ? pct(q) : "—") + "</td><td>" + res + "</td><td>" + fmt(s.S, 1) + "</td>" +
+        s.x.slice(0, 8).map(function (v, j) { return "<td>" + (j === 2 ? String(v) : fmt(v, 2)) + "</td>"; }).join("") +
+        "<td>" + esc(s.es) + "</td><td>" + (s.img ? "✓" : "—") + "</td><td>" + (s.fv || 4) + "</td><td><button data-del='" + s.id + "'>" + T("del") + "</button></td></tr>";
+    }).join("") : "<tr><td colspan='20' class='mut'>" + T("d_empty") + "</td></tr>");
+}
+function devMsg(t, cls) { var m = $("dmsg"); m.textContent = t; m.className = "sm " + (cls || ""); }
+function renderLog() {
+  $("log").textContent = LOG.length ? LOG.slice().reverse().map(function (e) { return e.t + "  " + e.l.toUpperCase() + "  " + e.m; }).join("\n") : "—";
+}
+function renderSys() {
+  var bytes = 0; try { bytes = (localStorage.getItem(KS) || "").length + (localStorage.getItem(KL) || "").length; } catch (e) {}
+  $("sys").innerHTML = T("k_mode") + ": " + CLOUD.st + (CLOUD.st === "sync" ? " (" + CLOUD.n + ")" : "") + (WPEND ? " · " + T("sy_wr").replace("%P", WPEND) : "") + " · MediaPipe: " + MP.st + " · " + T("k_store") + ": " + (bytes / 1024).toFixed(0) + " KB · " +
+    T("k_all") + ": " + SAMPLES.length + " · " + T("k_sess") + ": " + Object.keys(SESSION).length + " · v6 · " + navigator.userAgent.split(") ")[0] + ")";
+}
+function renderTests(R) {
+  $("tests").innerHTML = "<table>" + R.map(function (r) {
+    var info = (r.k === "t8" || r.k === "t9") && !r.ok;
+    return "<tr><td class='" + (info ? "mut" : r.ok ? "ok" : "bad") + "'>" + (info ? "·" : r.ok ? "PASS" : "FAIL") + "</td><td>" + T(r.k) + "</td><td class='mut'>" + (LANG === "en" ? r.v.replace(/(\d),(\d)/g, "$1.$2") : r.v.replace(/(\d)\.(\d)/g, "$1,$2")) + "</td></tr>";
+  }).join("") + "</table>";
+}
+
+/* ---------- formulas screen ---------- */
+function buildEx() {
+  var f = [60,60,60,60,60, 60,60,60,60,60, 60,60,60,140,140, 60,60,60,140,140, 60,60,60,140,140];
+  function grid(v, hl) { return "<div class='g5'>" + v.map(function (q) { return "<span" + (hl && q ? " class='nz'" : "") + ">" + q + "</span>"; }).join("") + "</div>"; }
+  var f2 = f.map(function (v) { return v + 40; });
+  $("ex").innerHTML = "<p class='sm mut'>f → ∇²f</p>" + grid(f) + grid(lapSmall(f, 5), 1) +
+    "<p class='sm mut'>f + 40 → ∇²(f + 40)</p>" + grid(f2) + grid(lapSmall(f2, 5), 1);
+}
+var EQ = [];
+function prepEq() {
+  document.querySelectorAll(".eq").forEach(function (e) {
+    var h = e.innerHTML.replace(/\{\{([\s\S]*?)\/\/([\s\S]*?)\}\}/g, "<span class='fr'><span>$1</span><span>$2</span></span>");
+    EQ.push([e, h]); e.innerHTML = h;
+  });
+}
+function renderRefs() {
+  $("refs").innerHTML = REFS.map(function (r) {
+    return "<li>" + r[0] + " " + r[1] + ". <i>" + r[2] + "</i>" + (r[3] ? " <a href='" + r[3] + "' target='_blank' rel='noopener'>" + r[3].replace("https://", "") + "</a>" : "") + "</li>";
+  }).join("");
+}
+
+/* ---------- language, tabs ---------- */
+function setLang(l) {
+  LANG = l; document.documentElement.lang = l;
+  document.querySelectorAll("[data-lang]").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.lang === l); });
+  document.querySelectorAll("[data-i]").forEach(function (e) { e.textContent = T(e.dataset.i); });
+  EQ.forEach(function (p) { p[0].innerHTML = l === "en" ? p[1].replace(/(\d),(\d)/g, "$1.$2") : p[1]; });
+  buildEx(); renderList();
+  if (TAB === "dev") renderDev();
+  if (LASTT) renderTests(LASTT);
+  onSync();
+  if ($("err").dataset.k) showErr($("err").dataset.k);
+}
+function setTab(t) {
+  TAB = t;
+  ["an", "fm", "dev"].forEach(function (x) { $(x).hidden = x !== t; });
+  document.querySelectorAll("[data-tab]").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.tab === t); });
+  if (t === "dev") renderDev();
+  window.scrollTo(0, 0);
+}
+
+function init() {
+  prepEq(); renderRefs();
+  var d = $("drop"), fi = $("fi");
+  fi.addEventListener("change", function () { addFiles(fi.files); fi.value = ""; });
+  ["dragenter", "dragover"].forEach(function (e) { d.addEventListener(e, function (v) { v.preventDefault(); d.classList.add("over"); }); });
+  ["dragleave", "drop"].forEach(function (e) { d.addEventListener(e, function (v) { v.preventDefault(); d.classList.remove("over"); }); });
+  d.addEventListener("drop", function (v) { if (v.dataTransfer && v.dataTransfer.files.length) addFiles(v.dataTransfer.files); });
+  document.addEventListener("click", function (e) {
+    var t = e.target.closest("[data-set],[data-open],[data-del],[data-tab],[data-lang],[data-f],[data-maps]");
+    if (!t) return;
+    if (t.dataset.set) {
+      var p = t.dataset.set.split(":"), s = SAMPLES.find(function (q) { return q.id === p[0]; });
+      if (s) { var y = +p[1]; if (s.y === y) $("prog").textContent = T("already"); else setLabel(s, y); renderList(); }
+    } else if (t.dataset.maps) {
+      var sm = SAMPLES.find(function (q) { return q.id === t.dataset.maps; });
+      if (sm && sm.img) {
+        t.disabled = true; t.textContent = T("loading");
+        urlImg("/_blob/" + sm.img).then(extract).then(function (F) { SESSION[sm.id] = F; renderDet(sm); })
+          .catch(function (e) { log("error", "photo load: " + (e && e.message)); t.textContent = T("det_fail"); });
+      }
+    } else if (t.dataset.open) {
+      var id = t.dataset.open; OPEN[id] = !OPEN[id];
+      var s2 = SAMPLES.find(function (q) { return q.id === id; });
+      $("d" + id).hidden = !OPEN[id]; if (OPEN[id] && s2) renderDet(s2);
+    } else if (t.dataset.del) {
+      removeSample(t.dataset.del); renderDev(); renderList();
+    } else if (t.dataset.tab) setTab(t.dataset.tab);
+    else if (t.dataset.lang) setLang(t.dataset.lang);
+    else if (t.dataset.f) { FILT = t.dataset.f; renderDev(); }
+  });
+  document.addEventListener("change", function (e) {
+    var t = e.target; if (!t.dataset || !t.dataset.rel) return;
+    var s = SAMPLES.find(function (q) { return q.id === t.dataset.rel; }); if (!s) return;
+    if (t.value === "") unLabel(s); else setLabel(s, +t.value);
+    log("info", "relabel " + s.name + " → " + (t.value === "" ? "—" : t.value === "1" ? "deepfake" : "real"));
+    renderDev(); renderList();
+  });
+  $("bTest").onclick = function () { LASTT = selfTest(); renderTests(LASTT); renderLog(); };
+  $("bExp").onclick = async function () {
+    var txt = JSON.stringify({ kind: "dfL", v: 5, feats: FEATS, samples: SAMPLES.map(function (s) { var o = toDoc(s); o.id = s.id; if (TH[s.id]) o.img = TH[s.id]; return o; }) });
+    var dl = IN_ART && window.claude ? await window.claude.use("downloads").catch(function () { return null; }) : null;
+    if (dl) {
+      try { await dl.save({ filename: "deepfake-data.json", data: txt }); log("info", "export: " + SAMPLES.length); }
+      catch (e) { log(e && e.code === "declined" ? "info" : "warn", "export: " + (e && e.code || e)); }
+      return;
+    }
+    var a2 = document.createElement("a"); a2.href = URL.createObjectURL(new Blob([txt], { type: "application/json" }));
+    a2.download = "deepfake-data.json"; document.body.appendChild(a2); a2.click();
+    setTimeout(function () { URL.revokeObjectURL(a2.href); a2.remove(); }, 500);
+    log("info", "export: " + SAMPLES.length);
+  };
+  $("bImp").onclick = function () { $("fImp").click(); };
+  $("fImp").onchange = function () {
+    var f = this.files[0]; this.value = ""; if (!f) return;
+    var r = new FileReader();
+    r.onload = function () {
+      try {
+        var o = JSON.parse(r.result);
+        if (!o || o.kind !== "dfL" || !(o.v === 4 || o.v === 5) || !Array.isArray(o.samples)) throw new Error("not a dfL file");
+        var byId = {}, n = 0;
+        SAMPLES.forEach(function (s) { byId[s.id] = s; });
+        o.samples.forEach(function (d) {
+          var s = fromDoc(d.id, d); if (!s) return;
+          var im = d.img || d.th64; if (typeof im === "string" && im.indexOf("data:image/") === 0) TH[s.id] = im;
+          byId[s.id] = s; n++; persist(s);
+        });
+        SAMPLES = Object.keys(byId).map(function (k) { return byId[k]; }).sort(function (a, b) { return a.t - b.t; });
+        saveTh(); saveLocal(); retrain(); devMsg(T("imp_ok").replace("%N", n), "ok"); log("info", "import: " + n);
+        renderDev(); renderList();
+      } catch (e) { log("error", "import: " + e.message); devMsg(T("imp_bad"), "bad"); }
+    };
+    r.readAsText(f);
+  };
+  var armed = 0;
+  $("bReset").onclick = function () {
+    var b2 = $("bReset");
+    if (!armed) {
+      armed = setTimeout(function () { armed = 0; b2.textContent = T("d_reset"); }, 4000);
+      b2.textContent = T(IN_ART ? "reset_q_c" : "reset_q"); return;
+    }
+    clearTimeout(armed); armed = 0; b2.textContent = T("d_reset");
+    SAMPLES.slice().forEach(function (s) { removeSample(s.id); });
+    SESSION = {}; OPEN = {}; TH = {}; saveTh();
+    log("info", "reset"); devMsg(T("reset_ok"), "ok"); renderDev(); renderList();
+  };
+  load();
+  setLang("kk"); setTab("an"); onSync();
+  connectCloud();
+}
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init); else init();
+</script>
+</body>
+</html>
